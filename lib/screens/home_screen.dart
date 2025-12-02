@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/profile_header.dart';
 import '../widgets/module_tile.dart';
 import '../app_theme.dart';
+import 'package:moodbuddy2/screens/profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -29,7 +30,18 @@ class HomeScreen extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 children: [
                   ListTile(leading: const Icon(Icons.home), title: const Text('Home'), onTap: () => Navigator.pop(context)),
-                  ListTile(leading: const Icon(Icons.person), title: const Text('Profile'), onTap: () {}),
+                  ListTile(
+                    leading: const Icon(Icons.person),
+                    title: const Text('Profile'),
+                    onTap: () {
+                      Navigator.pop(context);  // close the drawer
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                      );
+                    },
+                  ),
+
                   ListTile(leading: const Icon(Icons.settings), title: const Text('Settings'), onTap: () {}),
                   const Divider(),
                   ListTile(leading: const Icon(Icons.logout), title: const Text('Logout'), onTap: () {}),
