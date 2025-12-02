@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
+import 'screens/welcome_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
+import 'widgets/bottom_nav_shell.dart';
 import 'screens/home_screen.dart';
 import 'screens/mood_tracker_screen.dart';
 import 'screens/resource_library_screen.dart';
@@ -21,11 +23,13 @@ class MoodBuddyApp extends StatelessWidget {
       title: 'MoodBuddy2',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      initialRoute: '/login',
+      initialRoute: '/welcome',
       routes: {
+        '/welcome': (_) => Container(child: const WelcomeScreen()),
         '/login': (_) => LoginScreen(),
         '/register': (_) => RegisterScreen(),
-        '/home': (_) => HomeScreen(),
+        '/home': (_) => const HomeScreen(),
+        '/widgets': (_) => BottomNavShell(),
         '/moodtracker': (_) => MoodTrackerScreen(),
         '/resources': (_) => ResourceLibraryScreen(),
         '/progress': (_) => ProgressInsightScreen(),
