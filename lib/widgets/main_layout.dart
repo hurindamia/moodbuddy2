@@ -1,0 +1,58 @@
+import 'package:flutter/material.dart';
+import '../screens/home_screen.dart';
+import '../screens/mood_tracker_screen.dart';
+import '../screens/resource_library_screen.dart';
+import '../screens/progress_insight_screen.dart';
+import '../screens/hotline_screen.dart';
+import '../app_theme.dart';
+
+class MainLayout extends StatefulWidget {
+  final int initialIndex;
+  const MainLayout({super.key, required this.initialIndex});
+
+  @override
+  State<MainLayout> createState() => _MainLayoutState();
+}
+
+class _MainLayoutState extends State<MainLayout> {
+  late int _currentIndex;
+
+  final List<Widget> _pages = [
+    HomeScreen(), // index 0
+    MoodTrackerScreen(), // index 1
+    ResourceLibraryScreen(), // index 2
+    ProgressInsightScreen(), // index 3
+    HotlineScreen(), // index 4
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _pages[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        selectedItemColor: AppTheme.primary,
+        unselectedItemColor: Colors.grey,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.track_changes), label: "Mood"),
+          BottomNavigationBarItem(icon: Icon(Icons.book), label: "Resources"),
+          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: "Progress"),
+          BottomNavigationBarItem(icon: Icon(Icons.phone), label: "Hotline"),
+        ],
+        type: BottomNavigationBarType.fixed,
+      ),
+    );
+  }
+}

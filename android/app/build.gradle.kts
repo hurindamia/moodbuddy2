@@ -3,7 +3,15 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
+
+dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
+}
+
+
+
 
 android {
     namespace = "com.example.moodbuddy2"
@@ -20,15 +28,13 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.moodbuddy2"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        minSdk = flutter.minSdkVersion               // replace flutter.minSdkVersion
+        targetSdk = 33            // replace flutter.targetSdkVersion
+        versionCode = 1           // replace flutter.versionCode
+        versionName = "1.0"       // replace flutter.versionName
     }
+
 
     buildTypes {
         release {
@@ -42,3 +48,4 @@ android {
 flutter {
     source = "../.."
 }
+

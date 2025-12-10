@@ -1,9 +1,14 @@
+plugins {
+    id("com.google.gms.google-services")
+}
+
 allprojects {
     repositories {
         google()
         mavenCentral()
     }
 }
+
 
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
