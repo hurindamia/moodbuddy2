@@ -34,10 +34,10 @@ class MoodBuddyApp extends StatelessWidget {
         '/login': (_) => const LoginScreen(),
         '/register': (_) => const RegisterScreen(),
         '/home': (_) => const MainLayout(initialIndex:0),
-        '/moodtracker': (_) => const MoodTrackerScreen(),
-        '/resources': (_) => const ResourceLibraryScreen(),
-        '/progress': (_) => const ProgressInsightScreen(),
-        '/hotline': (_) => const HotlineScreen(),
+        '/moodtracker': (_) => MoodTrackerScreen(),
+        '/resources': (_) => ResourceLibraryScreen(userMood: Mood.neutral),
+        '/progress': (_) => ProgressInsightScreen(),
+        '/hotline': (_) => HotlineScreen(),
       },
     );
   }
