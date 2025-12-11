@@ -1,83 +1,205 @@
 import 'package:flutter/material.dart';
-import '../widgets/profile_header.dart';
-import '../widgets/module_tile.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
-import 'package:moodbuddy2/screens/profile_screen.dart';
+import 'package:moodbuddy2/screens/mood_quick_button.dart';
+import 'package:moodbuddy2/screens/progress_summary.dart';
+import 'package:moodbuddy2/screens/feautured_resource.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final modules = [
-      {'title': 'Mood Tracker', 'route': '/moodtracker', 'icon': Icons.track_changes},
-      {'title': 'Resource Library', 'route': '/resources', 'icon': Icons.book},
-      {'title': 'Progress Insight', 'route': '/progress', 'icon': Icons.show_chart},
-      {'title': 'Hotline & Self-Test', 'route': '/hotline', 'icon': Icons.phone},
-    ];
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('MoodBuddy2'),
-        backgroundColor: AppTheme.primary,
-      ),
-      drawer: Drawer(
-        child: Column(
+class _HomeScreenState extends State<HomeScreen> {
+  String username = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists && doc.data() != null) {
+        setState(() {
+          username = doc['name'] ?? '';
+        });
+      }
+    }
+  }
+
+  void _goTo(BuildContext context, String route) {
+    Navigator.pushNamed(context, route);
+  }
+
+  Widget _bigButton(BuildContext context,
+      {required String title,
+        required Color color,
+        required String route,
+        required IconData icon}) {
+    return GestureDetector(
+      onTap: () => _goTo(context, route),
+      child: Container(
+        height: 130,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 4))
+          ],
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Row(
           children: [
-            const ProfileHeader(name: 'Hurin Damia', email: 'hdhur@example.com'),
+            Icon(icon, size: 36, color: Colors.white),
+            const SizedBox(width: 12),
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  ListTile(leading: const Icon(Icons.home), title: const Text('Home'), onTap: () => Navigator.pop(context)),
-                  ListTile(
-                    leading: const Icon(Icons.person),
-                    title: const Text('Profile'),
-                    onTap: () {
-                      Navigator.pop(context);  // close the drawer
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                      );
-                    },
-                  ),
+              child: Text(
+                title,
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
 
-                  ListTile(leading: const Icon(Icons.settings), title: const Text('Settings'), onTap: () {}),
-                  const Divider(),
-                  ListTile(leading: const Icon(Icons.logout), title: const Text('Logout'), onTap: () {}),
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Background
+        Positioned.fill(child: Image.asset('assets/images/background1.png', fit: BoxFit.cover)),
+        Positioned.fill(child: Container(color: Colors.black26)),
+
+        // Content
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Greeting
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Hi, ${username.isEmpty ? 'User' : username}',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Welcome back — take a moment for yourself',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.person, color: AppTheme.primary),
+                  ),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(18.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Welcome back, Hurin!', style: Theme.of(context).textTheme.headlineLarge),
-            const SizedBox(height: 8),
-            const Text('Tap any module to get started', style: TextStyle(color: Colors.black54)),
-            const SizedBox(height: 18),
 
-            // scroll list of modules
-            Expanded(
-              child: ListView.builder(
-                itemCount: modules.length,
-                itemBuilder: (context, i) {
-                  final m = modules[i];
-                  return ModuleTile(
-                    title: m['title'] as String,
-                    icon: m['icon'] as IconData,
-                    onTap: () => Navigator.pushNamed(context, m['route'] as String),
-                  );
+              const SizedBox(height: 18),
+
+              // Quote box
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Quote of the day',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.primary,
+                        )),
+                    const SizedBox(height: 8),
+                    Text(
+                      '"The best time to take care of your mind is now."',
+                      style: GoogleFonts.poppins(fontSize: 16),
+                    ),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text('- MoodBuddy',
+                          style: GoogleFonts.poppins(
+                              color: Colors.black54, fontSize: 12)),
+                    )
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              // Mood Buttons
+              MoodQuickButtons(
+                onMoodSelected: (mood) {
+                  Navigator.pushNamed(context, '/moodtracker');
                 },
               ),
-            ),
-          ],
+
+              const SizedBox(height: 24),
+
+              // Progress Summary
+              ProgressSummaryCard(
+                moodStreak: 5,
+                journals: 3,
+                progressPercentage: 0.6,
+              ),
+
+              const SizedBox(height: 24),
+
+              // Featured Resources
+              Text(
+                'Featured Resources',
+                style: GoogleFonts.poppins(
+                    fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary),
+              ),
+              const SizedBox(height: 12),
+              FeaturedResourceCard(
+                title: 'Coping with Stress — Click to read',
+                onTap: () => Navigator.pushNamed(context, '/resources'),
+              ),
+              FeaturedResourceCard(
+                title: '5 Ways to Improve Sleep Quality',
+                onTap: () => Navigator.pushNamed(context, '/resources'),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

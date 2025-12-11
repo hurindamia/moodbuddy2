@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../app_theme.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -20,8 +22,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _register() {
-    Navigator.pushReplacementNamed(context, '/home');
+  void _register() async {
+    try {
+      // 1. Create user in Firebase Auth
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+          email: _email.text.trim(),
+          password: _pw.text.trim());
+
+      // 2. Save extra info in Firestore
+      String uid = userCredential.user!.uid;
+      await FirebaseFirestore.instance.collection("users").doc(uid).set({
+        "name": _name.text.trim(),
+        "email": _email.text.trim(),
+        "createdAt": DateTime.now(),
+      });
+
+      // 3. Navigate to home screen
+      Navigator.pushReplacementNamed(context, '/home');
+    } catch (e) {
+      // Show error
+      showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text("Registration Failed"),
+            content: Text(e.toString()),
+          ));
+    }
   }
 
   @override
