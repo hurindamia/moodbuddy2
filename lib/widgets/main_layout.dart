@@ -18,11 +18,11 @@ class _MainLayoutState extends State<MainLayout> {
   late int _currentIndex;
 
   final List<Widget> _pages = [
-    HomeScreen(), // index 0
-    MoodTrackerScreen(), // index 1
-    ResourceLibraryScreen(), // index 2
-    ProgressInsightScreen(), // index 3
-    HotlineScreen(), // index 4
+    const HomeScreen(), // index 0
+    const MoodTrackerScreen(), // index 1
+    const ResourceLibraryScreen(), // index 2
+    const ProgressInsightScreen(), // index 3
+    const HotlineScreen(), // index 4
   ];
 
   @override

@@ -45,7 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: Text("Registration Failed"),
+            title: const Text("Registration Failed"),
             content: Text(e.toString()),
           ));
     }

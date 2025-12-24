@@ -18,7 +18,7 @@ class HotlineScreen extends StatelessWidget {
         children: [
           const Text('Quick self-check', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 10),
-          Card(child: Padding(padding: const EdgeInsets.all(12), child: const Text('If you feel in immediate danger, contact local emergency services. This screen contains simple guidance and hotlines.'))),
+          const Card(child: Padding(padding: EdgeInsets.all(12), child: Text('If you feel in immediate danger, contact local emergency services. This screen contains simple guidance and hotlines.'))),
           const SizedBox(height: 16),
           const Text('Hotlines', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
