@@ -16,7 +16,8 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform, // if using FlutterFire CLI
   );
-  await dotenv.load(fileName: ".env");
+  //await dotenv.load(fileName: ".env");
+  //print(dotenv.env['HF_API_KEY']); // should print your key
   runApp(const MoodBuddyApp());
 }
 
