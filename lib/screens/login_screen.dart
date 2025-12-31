@@ -33,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       // 3. Navigate to home screen
+      if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       showDialog(

@@ -39,6 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
 
       // 3. Navigate to home screen
+      if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       // Show error
