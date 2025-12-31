@@ -3,7 +3,7 @@ import '../screens/home_screen.dart';
 import '../screens/mood_tracker_screen.dart';
 import '../screens/resource_library_screen.dart';
 import '../screens/progress_insight_screen.dart';
-import '../screens/hotline_screen.dart';
+import '../screens/hotline/hotline_screen.dart';
 import '../app_theme.dart';
 
 class MainLayout extends StatefulWidget {
@@ -22,7 +22,8 @@ class _MainLayoutState extends State<MainLayout> {
     const MoodTrackerScreen(), // index 1
     const ResourceLibraryScreen(), // index 2
     const ProgressInsightScreen(), // index 3
-    const HotlineScreen(), // index 4
+    // ignore: prefer_const_constructors
+    HotlineScreen(), // index 4
   ];
 
   @override

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'edit_profile_screen.dart';
 import 'privacy_policy_screen.dart';
+// ignore: unused_import
 import 'terms_service_screen.dart';
 import 'about_us.dart';
 
@@ -27,7 +28,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const lightPurple = Color(0xFFF3E5F5);
     const cardPurple = Color(0xFF9575CD);
 
     return Scaffold(

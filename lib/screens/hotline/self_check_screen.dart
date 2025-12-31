@@ -11,13 +11,47 @@ class SelfCheckScreen extends StatefulWidget {
 
 class _SelfCheckScreenState extends State<SelfCheckScreen> {
   final questions = [
+    // STRESS
     SelfCheckQuestion(
-        text: 'I felt overwhelmed by my academic responsibilities'),
-    SelfCheckQuestion(text: 'I found it difficult to relax'),
-    SelfCheckQuestion(text: 'I felt worried or uneasy without a clear reason'),
-    SelfCheckQuestion(text: 'I lacked motivation for my usual activities'),
-    SelfCheckQuestion(text: 'I felt emotionally drained'),
-    SelfCheckQuestion(text: 'I had difficulty concentrating during lectures'),
+      text: 'I felt overwhelmed by my academic workload',
+      category: EmotionCategory.stress,
+    ),
+    SelfCheckQuestion(
+      text: 'I felt under constant pressure to perform well',
+      category: EmotionCategory.stress,
+    ),
+    SelfCheckQuestion(
+      text: 'I felt emotionally exhausted at the end of the day',
+      category: EmotionCategory.stress,
+    ),
+
+    // ANXIETY
+    SelfCheckQuestion(
+      text: 'I felt worried or uneasy without a clear reason',
+      category: EmotionCategory.anxiety,
+    ),
+    SelfCheckQuestion(
+      text: 'I felt anxious when thinking about deadlines',
+      category: EmotionCategory.anxiety,
+    ),
+    SelfCheckQuestion(
+      text: 'I felt restless or on edge',
+      category: EmotionCategory.anxiety,
+    ),
+
+    // MOOD
+    SelfCheckQuestion(
+      text: 'I found it difficult to enjoy activities I usually like',
+      category: EmotionCategory.mood,
+    ),
+    SelfCheckQuestion(
+      text: 'I felt unmotivated to complete my tasks',
+      category: EmotionCategory.mood,
+    ),
+    SelfCheckQuestion(
+      text: 'I felt mentally tired even after resting',
+      category: EmotionCategory.mood,
+    ),
   ];
 
   int get totalScore =>
@@ -58,15 +92,15 @@ class _SelfCheckScreenState extends State<SelfCheckScreen> {
                     Slider(
                       value: q.score.toDouble(),
                       min: 0,
-                      max: 3,
-                      divisions: 3,
+                      max: 4,
+                      divisions: 4,
                       label: q.score.toString(),
                       onChanged: (value) {
                         setState(() => q.score = value.toInt());
                       },
                     ),
                     const Text(
-                      '0 = Never   •   3 = Most of the time',
+                      '0 = Never   •   1 = Rarely   •   2 = Sometimes   •   3 = Often   •   4 = Almost Always',
                       style: TextStyle(fontSize: 12),
                     ),
                   ],
@@ -83,7 +117,14 @@ class _SelfCheckScreenState extends State<SelfCheckScreen> {
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: () {
-              Navigator.pop(context, totalScore);
+              int maxScore = questions.length * 4;
+              double percentage = (totalScore / maxScore) * 100;
+
+              Navigator.pop(context, {
+                'totalScore': totalScore,
+                'percentage': percentage,
+                'questions': questions,
+              });
             },
             child: const Text(
               'VIEW RESULT',
