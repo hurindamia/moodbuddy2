@@ -180,7 +180,6 @@ class _HotlineScreenState extends State<HotlineScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-<<<<<<< HEAD
           Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             color: Colors.blue.shade50,
@@ -205,7 +204,6 @@ class _HotlineScreenState extends State<HotlineScreen> {
                 // Contact action placeholder
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Would call ${h['number']} (demo)')));
               },
->>>>>>> origin/ctmai
             ),
           ),
 
