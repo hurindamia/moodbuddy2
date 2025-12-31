@@ -33,12 +33,13 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       // 3. Navigate to home screen
+      if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: Text("Login Failed"),
+            title: const Text("Login Failed"),
             content: Text(e.toString()),
           ));
     }
@@ -53,20 +54,20 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text("MoodBuddy", style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Color(0xFF7B2CBF))),
-              SizedBox(height: 40),
-              TextField(controller: email, decoration: InputDecoration(labelText: "Email", border: OutlineInputBorder())),
-              SizedBox(height: 20),
-              TextField(controller: password, obscureText: true, decoration: InputDecoration(labelText: "Password", border: OutlineInputBorder())),
-              SizedBox(height: 30),
+              const Text("MoodBuddy", style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Color(0xFF7B2CBF))),
+              const SizedBox(height: 40),
+              TextField(controller: email, decoration: const InputDecoration(labelText: "Email", border: OutlineInputBorder())),
+              const SizedBox(height: 20),
+              TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: "Password", border: OutlineInputBorder())),
+              const SizedBox(height: 30),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF7B2CBF), minimumSize: Size(double.infinity, 50)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7B2CBF), minimumSize: const Size(double.infinity, 50)),
                 onPressed: _login,
-                child: Text("Login", style: TextStyle(color: Colors.white, fontSize: 18)),
+                child: const Text("Login", style: TextStyle(color: Colors.white, fontSize: 18)),
               ),
               TextButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterScreen())),
-                child: Text("Create an account"),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                child: const Text("Create an account"),
               )
             ],
           ),

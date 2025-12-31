@@ -39,13 +39,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
 
       // 3. Navigate to home screen
+      if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       // Show error
       showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: Text("Registration Failed"),
+            title: const Text("Registration Failed"),
             content: Text(e.toString()),
           ));
     }

@@ -21,9 +21,9 @@ class FeaturedResourceCard extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.primary.withOpacity(0.9),
+          color: AppTheme.primary.withValues(alpha:0.9),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Colors.black26,
               blurRadius: 6,
@@ -33,7 +33,7 @@ class FeaturedResourceCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.book, size: 36, color: Colors.white),
+            const Icon(Icons.book, size: 36, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(
               child: Text(

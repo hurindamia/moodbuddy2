@@ -35,7 +35,7 @@ class ProgressInsightScreen extends StatelessWidget {
                     Expanded(
                       child: Container(
                         height: 18,
-                        decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.3), borderRadius: BorderRadius.circular(8)),
+                        decoration: BoxDecoration(color: AppTheme.primary.withValues(alpha:0.3), borderRadius: BorderRadius.circular(8)),
                         child: FractionallySizedBox(
                           widthFactor: score / 5,
                           alignment: Alignment.centerLeft,

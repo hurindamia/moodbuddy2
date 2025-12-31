@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
 import 'package:moodbuddy2/screens/mood_quick_button.dart';
 import 'package:moodbuddy2/screens/progress_summary.dart';
-import 'package:moodbuddy2/screens/feautured_resource.dart';
+import 'package:moodbuddy2/screens/featured_resource.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -55,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 4))
           ],
         ),
@@ -120,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  CircleAvatar(
+                  const CircleAvatar(
                     backgroundColor: Colors.white,
                     child: Icon(Icons.person, color: AppTheme.primary),
                   ),
@@ -134,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -173,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 24),
 
               // Progress Summary
-              ProgressSummaryCard(
+              const ProgressSummaryCard(
                 moodStreak: 5,
                 journals: 3,
                 progressPercentage: 0.6,

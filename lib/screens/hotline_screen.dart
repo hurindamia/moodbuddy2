@@ -180,6 +180,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+<<<<<<< HEAD
           Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             color: Colors.blue.shade50,
@@ -188,6 +189,23 @@ class _HotlineScreenState extends State<HotlineScreen> {
               child: Text(
                 'This Hotline & Self-Test section helps you reflect on your emotional wellbeing and find appropriate support.',
               ),
+=======
+          const Text('Quick self-check', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const SizedBox(height: 10),
+          const Card(child: Padding(padding: EdgeInsets.all(12), child: Text('If you feel in immediate danger, contact local emergency services. This screen contains simple guidance and hotlines.'))),
+          const SizedBox(height: 16),
+          const Text('Hotlines', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          ...hotlines.map((h) => Card(
+            child: ListTile(
+              leading: const Icon(Icons.call),
+              title: Text(h['title']!),
+              subtitle: Text(h['number']!),
+              onTap: () {
+                // Contact action placeholder
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Would call ${h['number']} (demo)')));
+              },
+>>>>>>> origin/ctmai
             ),
           ),
 
