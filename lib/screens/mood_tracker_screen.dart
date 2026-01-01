@@ -144,6 +144,9 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
 
     final id = DateFormat('yyyy-MM-dd').format(_selectedDay);
 
+    final bool isNegativeDay =
+        _moodScore >= 4 || _stressLevel >= 7;
+
     await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
@@ -155,6 +158,7 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
       'sleepHours': _sleepHour + (_sleepMinute / 60),
       'date': Timestamp.fromDate(_selectedDay),
       'shortcuts': selectedShortcuts.map((k, v) => MapEntry(k, v.toList())),
+      'isNegativeDay': isNegativeDay,
     });
 
     await _loadAllEntries();
@@ -196,7 +200,8 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
 
     if (!doc.exists) return;
 
-    final data = doc.data()!;
+    final data = doc.data();
+    if (data == null) return; // Add a null check here
     setState(() {
       data.forEach((key, value) {
         shortcutOptions[key] = List<String>.from(value);
