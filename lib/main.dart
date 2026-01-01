@@ -36,7 +36,7 @@ class MoodBuddyApp extends StatelessWidget {
         '/register': (_) => const RegisterScreen(),
         '/home': (_) => const MainLayout(initialIndex:0),
         '/moodtracker': (_) => MoodTrackerScreen(),
-        '/resources': (_) => ResourceLibraryScreen(userMood: Mood.neutral),
+        '/resources': (_) => ResourceLibraryScreen(),
         '/progress': (_) => ProgressInsightScreen(),
         '/hotline': (_) => HotlineScreen(),
       },

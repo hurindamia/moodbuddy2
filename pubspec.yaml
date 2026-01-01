@@ -12,6 +12,7 @@ dependencies:
   cupertino_icons: ^1.0.5
   google_fonts: ^5.0.0
   url_launcher: ^6.2.10
+  youtube_player_flutter: ^9.0.3
 
 
   firebase_core: ^3.15.2

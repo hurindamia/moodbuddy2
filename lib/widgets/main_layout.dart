@@ -20,7 +20,7 @@ class _MainLayoutState extends State<MainLayout> {
   final List<Widget> _pages = [
     HomeScreen(), // index 0
     MoodTrackerScreen(), // index 1
-    ResourceLibraryScreen(userMood: Mood.neutral), // index 2
+    ResourceLibraryScreen(), // index 2
     ProgressInsightScreen(), // index 3
     HotlineScreen(), // index 4
   ];
