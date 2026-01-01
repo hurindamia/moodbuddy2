@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/support_option.dart';
 import '../../app_theme.dart';
+import '../../widgets/clinic_card_widget.dart';
+
 
 class SupportDetailScreen extends StatelessWidget {
   final SupportOption option;
@@ -62,7 +64,6 @@ class SupportDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-
           /* =========================
              DESCRIPTION
           ========================== */
@@ -70,34 +71,7 @@ class SupportDetailScreen extends StatelessWidget {
             option.description,
             style: const TextStyle(fontSize: 14),
           ),
-          const SizedBox(height: 30),
 
-          /* =========================
-             QUICK ACTIONS
-          ========================== */
-          const Text(
-            'Quick Actions',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (option.website != null)
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              onPressed: () => _openWebsite(option.website!),
-              child: const Text(
-                'Book Appointment / Visit Website',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
           const SizedBox(height: 10),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -129,39 +103,52 @@ class SupportDetailScreen extends StatelessWidget {
             const SizedBox(height: 12),
             ...option.psychologists!,
           ],
-          const SizedBox(height: 30),
+
+          if (option.clinics != null) ...[
+  const Text(
+    'Clinics & Hospitals',
+    style: TextStyle(
+      fontSize: 20,
+      fontWeight: FontWeight.bold,
+    ),
+  ),
+  const SizedBox(height: 12),
+  ...option.clinics!
+      .map((c) => ClinicCardWidget(clinic: c))
+      .toList(),
+],
+
+
+
+          const SizedBox(height: 10),
 
           /* =========================
-             HOW TO GET THERE
+             QUICK ACTIONS
           ========================== */
           const Text(
-            'How to Get There',
+            'Visit Website 👇',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            option.address ?? 'Universiti Sains Malaysia\nKampus Induk',
-            style: const TextStyle(fontSize: 14),
-          ),
-          const SizedBox(height: 14),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+          const SizedBox(height: 12),
+          if (option.website != null)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              onPressed: () => _openWebsite(option.website!),
+              child: const Text(
+                'Book Appointment / Visit Website',
+                style: TextStyle(color: Colors.white),
               ),
             ),
-            onPressed: () => _openMap(option.locationQuery),
-            child: const Text(
-              'Open in Google Maps',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 30),
 
           /* =========================
              APP LOGO (BOTTOM)
@@ -170,10 +157,10 @@ class SupportDetailScreen extends StatelessWidget {
             child: Column(
               children: [
                 Image.asset(
-                  'assets/images/moodbuddy_logo2.jpg',
-                  height: 60,
+                  'assets/images/moodbuddy_logo3.png',
+                  height: 120,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 const Text(
                   'MoodBuddy\nSupporting Student Wellbeing',
                   textAlign: TextAlign.center,

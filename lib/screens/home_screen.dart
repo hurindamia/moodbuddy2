@@ -30,6 +30,8 @@ class _HomeScreenState extends State<HomeScreen> {
           .collection('users')
           .doc(user.uid)
           .get();
+      
+      if (!mounted) return;
 
       if (doc.exists && doc.data() != null) {
         setState(() {

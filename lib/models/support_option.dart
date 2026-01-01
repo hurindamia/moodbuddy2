@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'clinic_card.dart';
 
 class SupportOption {
   final String title;
@@ -8,6 +9,10 @@ class SupportOption {
   final String? website;
   final String? imagePath;
   final List<Widget>? psychologists;
+  final List<ClinicCard>? clinics;
+  final bool showWebsiteButton;
+
+
 
   SupportOption({
     required this.title,
@@ -17,5 +22,7 @@ class SupportOption {
     this.website,
     this.imagePath,
     this.psychologists,
+    this.clinics,
+    this.showWebsiteButton = true,
   });
 }

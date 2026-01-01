@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:moodbuddy2/screens/hotline/support_detail_screen.dart';
 import 'package:moodbuddy2/widgets/psychologist_card.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -9,9 +10,11 @@ import '../../models/support_option.dart';
 import '../../models/call_support_option.dart';
 import '../../models/self_check_question.dart';
 import '../../models/self_check_result.dart';
+import '../../models/clinic_card.dart';
 
 import 'self_check_screen.dart';
 import 'result_history_screen.dart';
+// ignore: duplicate_import
 import 'support_detail_screen.dart';
 
 class HotlineScreen extends StatefulWidget {
@@ -22,8 +25,10 @@ class HotlineScreen extends StatefulWidget {
 }
 
 class _HotlineScreenState extends State<HotlineScreen> {
+  final user = FirebaseAuth.instance.currentUser!;
   late SupportOption selectedSupport;
   CallSupportOption? selectedCallOption;
+  String username = '';
 
   final supportOptions = [
     SupportOption(
@@ -69,28 +74,90 @@ class _HotlineScreenState extends State<HotlineScreen> {
           email: 'zafranrafaai@usm.my',
           imagePath: 'assets/images/psychologists/anis.jpg',
         ),
-
-        // ADD MORE FROM DIRECTORY LATER
       ],
     ),
     SupportOption(
       title: 'Pusat Sejahtera USM',
-      description: 'Student wellbeing and health services.',
+      description:
+          'Pusat Sejahtera USM is the primary healthcare centre for students '
+          'and staff at Universiti Sains Malaysia.\n\n'
+          'It provides medical and wellbeing services including mental health '
+          'support, basic medical consultations, and referrals to specialist care.\n\n'
+          'Students may visit Pusat Sejahtera for concerns such as stress-related '
+          'health issues, emotional wellbeing, sleep problems, or when a medical '
+          'referral is required.',
       locationQuery: 'Pusat Sejahtera USM',
+      address: 'Pusat Sejahtera USM\n'
+          'Universiti Sains Malaysia\n'
+          'Kampus Induk, 11800 Gelugor, Pulau Pinang',
+      website: 'https://pusatsejahtera.usm.my', // EDIT IF NEEDED
+      imagePath: 'assets/images/ps_usm.png',
+      psychologists: null, // Medical-based service (not counsellor list)
     ),
     SupportOption(
-      title: 'School / Faculty Counselor',
-      description: 'Faculty-based counselling and academic support.',
-      locationQuery: 'Universiti Sains Malaysia',
+      title: 'Mental Health Services near USM',
+      description: 'Specialist mental health services near USM.',
+      locationQuery: 'psychiatrist near Universiti Sains Malaysia',
+      imagePath: 'assets/images/kk.jpg',
+      showWebsiteButton: false,
+      clinics: [
+        const ClinicCard(
+          name: 'Hospital Pulau Pinang – Psychiatry Department',
+          address: 'Jalan Residensi, 10990 George Town, Penang',
+          phone: '+604-2225333',
+          locationQuery: 'Hospital Pulau Pinang Psychiatry',
+          imagePath: 'assets/images/hpp.jpg',
+          website: 'https://hospulaupinang.moh.gov.my',
+        ),
+        const ClinicCard(
+          name: 'Klinik Kesihatan Sungai Dua',
+          address:
+              'Jalan Pinang, Kampung Dua Bukit, 11700 Gelugor, Pulau Pinang',
+          phone: '+604-642 2201',
+          locationQuery: 'Klinik Kesihatan Sungai Dua',
+          imagePath: 'assets/images/kk.jpg',
+        ),
+        const ClinicCard(
+          name: 'Mintygreen Psychological & Counseling Services',
+          address:
+              '1-1-9, Imperial Grande, Persiaran Relau, Kampung Darat, 11900 Bayan Lepas, Pulau Pinang',
+          phone: '+60 18-205 2528',
+          locationQuery: 'Mintygreen Bayan lepas',
+          imagePath: 'assets/images/mintygreen.jpg',
+        ),
+        const ClinicCard(
+          name: 'Blue Mind Specialist Clinic (Psychiatry)',
+          address:
+              'B-12, 1, Lorong Bayan Indah 3, Bay Avenue, 11900 Bayan Lepas, Pulau Pinang',
+          phone: '+6011-5657 6877',
+          locationQuery: 'Blue Mind Specialist Clinic (Psychiatry)',
+          imagePath: 'assets/images/blue_mind.jpg',
+        ),
+        const ClinicCard(
+          name: 'Carpe Diem Counseling & Consulting Centre',
+          address:
+              '723-J-1, Vanda Business Park, Jalan Sungai Dua, 11700 Gelugor, Penang, Jalan Sungai Dua, 11700 Gelugor, Penang',
+          phone: '+6012-281 0045',
+          locationQuery: 'Carpe Diem Counseling & Consulting 卡比典心灵成长工作室',
+          imagePath: 'assets/images/carpe.jpg',
+        ),
+        const ClinicCard(
+          name: 'Persatuan Minda DHome',
+          address:
+              '66, Lintang Bukit Jambul, Bukit Jambul, 11900 Bayan Lepas, Pulau Pinang',
+          phone: '+604-291 0111',
+          locationQuery: 'Persatuan Minda DHome',
+          imagePath: 'assets/images/dhome.jpg',
+        ),
+        const ClinicCard(
+          name: 'MENTARI Penang',
+          address: 'Jalan Perak, George Town, Penang',
+          phone: '+604-2886233',
+          locationQuery: 'MENTARI Penang',
+          imagePath: 'assets/images/mentari.jpg',
+        ),
+      ],
     ),
-    SupportOption(
-        title: 'Psychiatrist near USM',
-        description: 'EDIT DETAILS HERE',
-        locationQuery: ''),
-    SupportOption(
-        title: 'Hospital/Klinik Kesihatan near USM',
-        description: 'EDIT DETAILS HERE',
-        locationQuery: ''),
   ];
 
   final callSupportOptions = [
@@ -104,6 +171,23 @@ class _HotlineScreenState extends State<HotlineScreen> {
   void initState() {
     super.initState();
     selectedSupport = supportOptions.first;
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    if (doc.exists) {
+      setState(() {
+        username = doc['fullName'] ?? '';
+      });
+    }
   }
 
   /* =========================
@@ -141,13 +225,49 @@ class _HotlineScreenState extends State<HotlineScreen> {
 
   Map<String, dynamic> _interpretScore(double percentage) {
     if (percentage <= 25) {
-      return {'label': 'LOW', 'color': Colors.green};
+      return {
+        'label': 'LOW',
+        'color': Colors.green,
+        'message': [
+          'Your responses suggest that your emotional wellbeing is currently within a manageable range.',
+          'You may still experience occasional stress or low mood, which is a normal part of daily life.',
+          'Continue practicing healthy routines such as adequate rest, balanced study schedules, and social connection.',
+          'It may be helpful to check in with yourself regularly and use this self-check again when needed.'
+        ],
+      };
     } else if (percentage <= 50) {
-      return {'label': 'MILD–MODERATE', 'color': Colors.yellow};
+      return {
+        'label': 'MILD–MODERATE',
+        'color': const Color.fromARGB(255, 205, 138, 4),
+        'message': [
+          'Your responses suggest that you may be experiencing noticeable emotional strain at times.',
+          'You might feel stressed, worried, or less motivated more frequently than usual.',
+          'Consider taking short breaks, managing academic workload, and talking to someone you trust.',
+          'If these feelings persist, seeking campus support such as counselling services may be helpful.',
+        ],
+      };
     } else if (percentage <= 75) {
-      return {'label': 'MODERATE–HIGH', 'color': Colors.orange};
+      return {
+        'label': 'MODERATE–HIGH',
+        'color': Colors.orange,
+        'message': [
+          'Your responses suggest a higher level of emotional difficulty that may be affecting your daily life.',
+          'You may feel overwhelmed, anxious, or emotionally tired more often.',
+          'It is recommended to reach out for support, such as a university counsellor or student wellbeing services.',
+          'Early support can help prevent these feelings from becoming more difficult to manage.',
+        ],
+      };
     } else {
-      return {'label': 'HIGH', 'color': Colors.red};
+      return {
+        'label': 'HIGH',
+        'color': Colors.red,
+        'message': [
+          'Your responses suggest significant emotional distress at this time.',
+          'These feelings may be having a strong impact on your wellbeing, focus, or daily functioning.',
+          'You are strongly encouraged to seek support from professional or campus mental health services.',
+          'If you feel unsafe or overwhelmed, please reach out to emergency or crisis support immediately.',
+        ],
+      };
     }
   }
 
@@ -168,10 +288,21 @@ class _HotlineScreenState extends State<HotlineScreen> {
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Before You Begin'),
-        content: const Text(
-          'This self-check helps you reflect on how you have been feeling recently.\n\n'
-          'It is not a medical diagnosis.\n\n'
-          'You may stop at any time.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ✅ LOGO
+            Image.asset(
+              'assets/images/moodbuddy_logo3.png',
+              height: 100,
+            ),
+
+            const Text(
+              'This self-check helps you reflect on how you have been feeling recently.\n\n'
+              'It is not a medical diagnosis.\n\n'
+              'You may stop at any time.',
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -235,16 +366,57 @@ class _HotlineScreenState extends State<HotlineScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Your Result'),
-        content: Text(
-          '${result['label']} : $score',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: result['color'],
-          ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
+        title: const Text('Your Result'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // LABEL + SCORE
+            Text(
+              '${result['label']} : $score',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: result['color'],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // SUPPORTIVE MESSAGES
+            ...List<Widget>.from(
+              (result['message'] as List<String>).map(
+                (msg) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    '• $msg',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // DISCLAIMER
+            const Text(
+              'This self-check is not a medical diagnosis.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }
@@ -266,12 +438,21 @@ class _HotlineScreenState extends State<HotlineScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Image.asset(
-              'assets/images/moodbuddy_white.jpg',
-              height: 180,
-              fit: BoxFit.cover,
+              'assets/images/moodbuddy12.png',
+              width: 250,
+              fit: BoxFit.fitWidth,
             ),
           ),
-          const SizedBox(height: 20),
+          Text(
+            'We’re glad you’re here.\n'
+            'Take a moment to check in with yourself — support is always available.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: Colors.grey.shade700,
+            ),
+          ),
 
           /* BLUE INFO BOX */
           Container(
@@ -281,7 +462,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
               borderRadius: BorderRadius.circular(18),
             ),
             child: const Text(
-              'This module helps USM students reflect on their emotional wellbeing '
+              'This section helps USM students reflect on their emotional wellbeing '
               'and connect with appropriate campus and professional support.',
               style: TextStyle(fontSize: 14),
             ),
@@ -320,7 +501,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
               style: TextStyle(color: Colors.white),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
+              backgroundColor: const Color.fromARGB(255, 111, 88, 153),
             ),
             onPressed: () {
               Navigator.push(
