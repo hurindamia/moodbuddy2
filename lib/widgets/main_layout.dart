@@ -3,7 +3,7 @@ import '../screens/home_screen.dart';
 import '../screens/mood_tracker_screen.dart';
 import '../screens/resource_library_screen.dart';
 import '../screens/progress_insight_screen.dart';
-import '../screens/hotline_screen.dart';
+import '../screens/hotline/hotline_screen.dart';
 import '../app_theme.dart';
 
 class MainLayout extends StatefulWidget {
@@ -18,10 +18,11 @@ class _MainLayoutState extends State<MainLayout> {
   late int _currentIndex;
 
   final List<Widget> _pages = [
-    HomeScreen(), // index 0
-    MoodTrackerScreen(), // index 1
-    ResourceLibraryScreen(), // index 2
-    ProgressInsightScreen(), // index 3
+    const HomeScreen(), // index 0
+    const MoodTrackerScreen(), // index 1
+    const ResourceLibraryScreen(), // index 2
+    const ProgressInsightScreen(), // index 3
+    // ignore: prefer_const_constructors
     HotlineScreen(), // index 4
   ];
 

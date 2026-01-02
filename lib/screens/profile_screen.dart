@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 // Ensure these files exist in the same directory (lib/screens/)
 import 'edit_profile_screen.dart';
 import 'privacy_policy_screen.dart';
+// ignore: unused_import
 import 'terms_service_screen.dart';
 import 'about_us.dart';
 

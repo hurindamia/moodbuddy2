@@ -39,13 +39,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
 
       // 3. Navigate to home screen
+      if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       // Show error
       showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: Text("Registration Failed"),
+            title: const Text("Registration Failed"),
             content: Text(e.toString()),
           ));
     }
@@ -59,6 +60,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         padding: const EdgeInsets.all(18.0),
         child: Column(
           children: [
+            Image.asset(
+              'assets/images/moodbuddy_logo3.png',
+              height: 200,
+            ),
+            const SizedBox(height: 16),
             TextField(controller: _name, decoration: const InputDecoration(labelText: 'Full name')),
             const SizedBox(height: 12),
             TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email')),
@@ -67,7 +73,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(onPressed: _register, child: const Text('Create account')),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 94, 53, 129), minimumSize: const Size(double.infinity, 50)),
+                onPressed: _register,
+                child: const Text("Create Account", style: TextStyle(color: Colors.white, fontSize: 18)),
+              ),
             ),
           ],
         ),
