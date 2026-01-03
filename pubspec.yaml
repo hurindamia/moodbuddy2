@@ -14,13 +14,11 @@ dependencies:
   image_picker: ^1.0.7
   geolocator: ^10.1.0 
   url_launcher: ^6.3.2
-
   fl_chart: ^0.66.0
-
-
   firebase_core: ^3.15.2
   firebase_auth: ^5.7.0
   cloud_firestore: ^5.6.10
+  youtube_player_flutter: ^9.0.3
 
 
   pdf: ^3.10.7

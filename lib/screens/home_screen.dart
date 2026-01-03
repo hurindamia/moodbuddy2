@@ -3,10 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
 import 'package:moodbuddy2/screens/mood_quick_button.dart';
 import 'package:moodbuddy2/screens/progress_summary.dart';
-import 'package:moodbuddy2/screens/feautured_resource.dart';
+import 'package:moodbuddy2/screens/featured_resource.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:moodbuddy2/screens/profile_screen.dart'; // <--- NEW IMPORT
+import 'package:moodbuddy2/screens/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,7 +16,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // EXTENDED STATE VARIABLES
   String username = '';
   String userEmail = '';
   String emergencyName = '';
@@ -26,10 +25,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserInfo(); // Renamed to reflect loading all user data
+    _loadUserInfo();
   }
 
-  // UPDATED METHOD TO FETCH ALL REQUIRED PROFILE DATA
   Future<void> _loadUserInfo() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -38,37 +36,34 @@ class _HomeScreenState extends State<HomeScreen> {
           .doc(user.uid)
           .get();
 
-      setState(() {
-        userEmail = user.email ?? 'No Email Provided'; // Get email from Auth
-
-        if (doc.exists && doc.data() != null) {
-          username = doc.data()!['name'] ?? '';
-          emergencyName = doc.data()!['emergencyName'] ?? '';
-          emergencyPhone = doc.data()!['emergencyPhone'] ?? '';
-          profileImageURL = doc.data()!['profileImage'];
-        } else {
-          username = 'User';
-        }
-      });
+      if (mounted) {
+        setState(() {
+          userEmail = user.email ?? 'No Email Provided';
+          if (doc.exists && doc.data() != null) {
+            username = doc.data()!['name'] ?? '';
+            emergencyName = doc.data()!['emergencyName'] ?? '';
+            emergencyPhone = doc.data()!['emergencyPhone'] ?? '';
+            profileImageURL = doc.data()!['profileImage'];
+          } else {
+            username = 'User';
+          }
+        });
+      }
     } else {
-      setState(() {
-        username = 'Guest';
-        userEmail = 'Not Logged In';
-      });
+      if (mounted) {
+        setState(() {
+          username = 'Guest';
+          userEmail = 'Not Logged In';
+        });
+      }
     }
   }
 
-  void _goTo(BuildContext context, String route) {
-    Navigator.pushNamed(context, route);
-  }
-
-  // NEW METHOD TO HANDLE PROFILE NAVIGATION
   void _goToProfile(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ProfileScreen(
-          // Pass all required data to ProfileScreen
           initialName: username.isEmpty ? 'User' : username,
           initialEmail: userEmail,
           initialEmergencyName: emergencyName,
@@ -79,54 +74,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _bigButton(BuildContext context,
-      {required String title,
-        required Color color,
-        required String route,
-        required IconData icon}) {
-    return GestureDetector(
-      onTap: () => _goTo(context, route),
-      child: Container(
-        height: 130,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 4))
-          ],
-        ),
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Icon(icon, size: 36, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         // Background
-        Positioned.fill(child: Image.asset('assets/images/background1.png', fit: BoxFit.cover)),
-        Positioned.fill(child: Container(color: Colors.black26)),
+        Positioned.fill(
+          child: Image.asset('assets/images/background1.png', fit: BoxFit.cover),
+        ),
+        Positioned.fill(
+          child: Container(color: Colors.black26),
+        ),
 
         // Content
-        SafeArea( // Added SafeArea and SingleChildScrollView for better screen handling
+        SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             child: Column(
@@ -157,12 +118,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                    // PROFILE BUTTON
                     GestureDetector(
-                      onTap: () => _goToProfile(context), // <--- PROFILE NAVIGATION
+                      onTap: () => _goToProfile(context),
                       child: CircleAvatar(
                         backgroundColor: Colors.white,
-                        child: Icon(Icons.person, color: AppTheme.primary),
+                        backgroundImage: profileImageURL != null
+                            ? NetworkImage(profileImageURL!)
+                            : null,
+                        child: profileImageURL == null
+                            ? Icon(Icons.person, color: AppTheme.primary)
+                            : null,
                       ),
                     ),
                   ],
@@ -175,7 +140,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    // FIXED: Used withValues(alpha: 0.9) instead of withOpacity
+                    color: Colors.white.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -226,7 +192,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   'Featured Resources',
                   style: GoogleFonts.poppins(
-                      fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white // Contrast adjustment for background
+                  ),
                 ),
                 const SizedBox(height: 12),
                 FeaturedResourceCard(
@@ -237,7 +206,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   title: '5 Ways to Improve Sleep Quality',
                   onTap: () => Navigator.pushNamed(context, '/resources'),
                 ),
-                // End of content column
               ],
             ),
           ),

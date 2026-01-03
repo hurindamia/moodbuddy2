@@ -7,34 +7,33 @@ import 'package:fl_chart/fl_chart.dart';
 
 enum TimePeriod { week, month, year }
 
-// 1. DATA MODEL (Matches your MoodTrackerScreen fields)
 class MoodEntry {
   final DateTime date;
   final double moodScore;
   final double stressLevel;
   final double sleepHours;
-  final List<String> activities;
+  final Map<String, List<String>> shortcuts;
 
   MoodEntry({
     required this.date,
     required this.moodScore,
     required this.stressLevel,
     required this.sleepHours,
-    required this.activities,
+    required this.shortcuts,
   });
 
   factory MoodEntry.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    // Handle the 'shortcuts' map structure from your MoodTracker
-    final shortcuts = data['shortcuts'] as Map<String, dynamic>? ?? {};
-    final activityList = List<String>.from(shortcuts['activities'] ?? []);
-
     return MoodEntry(
       date: (data['date'] as Timestamp).toDate(),
-      moodScore: (data['moodScore'] ?? 3.0).toDouble(),
-      stressLevel: (data['stressLevel'] ?? 5.0).toDouble(),
-      sleepHours: (data['sleepHours'] ?? 7.0).toDouble(),
-      activities: activityList,
+      moodScore: (data['moodScore'] ?? 0).toDouble(),
+      stressLevel: (data['stressLevel'] ?? 1).toDouble(),
+      sleepHours: (data['sleepHours'] ?? 0).toDouble(),
+      shortcuts: data.containsKey('shortcuts')
+          ? (data['shortcuts'] as Map<String, dynamic>).map(
+            (k, v) => MapEntry(k, List<String>.from(v)),
+      )
+          : {},
     );
   }
 }
@@ -50,104 +49,308 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
   TimePeriod selectedPeriod = TimePeriod.week;
   List<MoodEntry> allEntries = [];
   bool isLoading = true;
+  DateTime _focusedDate = DateTime.now();
+
+  final double _sleepGoal = 8.0;
+  final double _stressThreshold = 4.0;
 
   @override
   void initState() {
     super.initState();
-    _fetchFirebaseData();
+    _loadMoodEntries();
   }
 
-  // 2. FIREBASE FETCHING LOGIC
-  Future<void> _fetchFirebaseData() async {
+  Future<void> _loadMoodEntries() async {
     setState(() => isLoading = true);
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       setState(() => isLoading = false);
       return;
     }
-
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('mood_entries')
-          .orderBy('date', descending: false) // Important for charts
+          .orderBy('date', descending: false)
           .get();
-
       allEntries = snapshot.docs.map((doc) => MoodEntry.fromFirestore(doc)).toList();
     } catch (e) {
-      debugPrint("Error fetching insights: $e");
+      debugPrint('Error: $e');
     }
-
-    if (mounted) setState(() => isLoading = false);
-  }
-
-  // 3. FILTERING LOGIC
-  List<MoodEntry> get _filteredEntries {
-    final now = DateTime.now();
-    DateTime startDate;
-
-    switch (selectedPeriod) {
-      case TimePeriod.week: startDate = now.subtract(const Duration(days: 7)); break;
-      case TimePeriod.month: startDate = now.subtract(const Duration(days: 30)); break;
-      case TimePeriod.year: startDate = now.subtract(const Duration(days: 365)); break;
-    }
-    return allEntries.where((entry) => entry.date.isAfter(startDate)).toList();
-  }
-
-  // 4. ANALYTICS CALCULATIONS
-  double get _avgMood => _filteredEntries.isEmpty ? 0 : _filteredEntries.map((e) => e.moodScore).reduce((a, b) => a + b) / _filteredEntries.length;
-  double get _avgStress => _filteredEntries.isEmpty ? 0 : _filteredEntries.map((e) => e.stressLevel).reduce((a, b) => a + b) / _filteredEntries.length;
-  double get _avgSleep => _filteredEntries.isEmpty ? 0 : _filteredEntries.map((e) => e.sleepHours).reduce((a, b) => a + b) / _filteredEntries.length;
-
-  // Positivity rate: entries where mood is 1 or 2 (Happy/Great)
-  double get _positivityRate => _filteredEntries.isEmpty ? 0 : _filteredEntries.where((e) => e.moodScore <= 2).length / _filteredEntries.length;
-
-  String get _summaryEmoji {
-    if (_avgMood == 0) return '😐';
-    if (_avgMood <= 1.5) return '😁';
-    if (_avgMood <= 2.5) return '😊';
-    if (_avgMood <= 3.5) return '😐';
-    return '😟';
-  }
-
-  String _getMoodEmoji(double score) {
-    if (score <= 1) return '😁';
-    if (score <= 2) return '😊';
-    if (score <= 3) return '😐';
-    if (score <= 4) return '😟';
-    return '😢';
-  }
-
-  // === CHART HELPERS ===
-
-  double _getLabelInterval() {
-    switch (selectedPeriod) {
-      case TimePeriod.week: return 1;
-      case TimePeriod.month: return 5;
-      case TimePeriod.year: return 30;
+    if (mounted) {
+      setState(() => isLoading = false);
     }
   }
 
-  Widget _bottomTitles(double value, TitleMeta meta) {
-    int index = value.toInt();
-    if (index < 0 || index >= _filteredEntries.length) return const SizedBox();
+  // --- LOGIC HELPERS ---
 
-    final date = _filteredEntries[index].date;
-    String text = selectedPeriod == TimePeriod.year
-        ? DateFormat('MMM').format(date)
-        : DateFormat('d').format(date);
+  double _calculateAverage(double Function(MoodEntry) selector) {
+    final entries = _filteredEntries;
+    if (entries.isEmpty) {
+      return 0.0;
+    }
+    return entries.map(selector).reduce((a, b) => a + b) / entries.length;
+  }
 
-    return SideTitleWidget(
-      axisSide: meta.axisSide,
-      space: 8,
-      child: Text(text, style: const TextStyle(fontSize: 10, color: Colors.black54)),
+  List<MoodEntry> _filterBySpecificDate(DateTime focus, TimePeriod period) {
+    return allEntries.where((entry) {
+      if (period == TimePeriod.month) {
+        return entry.date.month == focus.month && entry.date.year == focus.year;
+      } else if (period == TimePeriod.year) {
+        return entry.date.year == focus.year;
+      } else {
+        DateTime start = _getMonday(focus);
+        DateTime end = start.add(const Duration(days: 7));
+        return entry.date.isAfter(start.subtract(const Duration(seconds: 1))) &&
+            entry.date.isBefore(end);
+      }
+    }).toList();
+  }
+
+  List<MoodEntry> get _filteredEntries => _filterBySpecificDate(_focusedDate, selectedPeriod);
+
+  DateTime _getMonday(DateTime date) {
+    DateTime d = DateTime(date.year, date.month, date.day);
+    return d.subtract(Duration(days: d.weekday - 1));
+  }
+
+  String _getEmoji(double mood) {
+    if (mood <= 0) return '';
+    if (mood <= 1.5) return '😄';
+    if (mood <= 2.5) return '🙂';
+    if (mood <= 3.5) return '😐';
+    if (mood <= 4.5) return '🙁';
+    return '😖';
+  }
+
+  void _showShortcutsDialog(MoodEntry entry) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(DateFormat('EEEE, MMM d').format(entry.date),
+            style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: entry.shortcuts.isEmpty
+            ? const Text("No activities logged.")
+            : Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: entry.shortcuts.entries.map((e) => Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text("${e.key}: ${e.value.join(', ')}",
+                style: GoogleFonts.poppins(fontSize: 14)),
+          )).toList(),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Close"))],
+      ),
     );
+  }
+
+  // --- UI HELPERS ---
+
+  Widget _buildProgressBar(String label, double value, double maxRange, Color color, {bool reverse = false}) {
+    double percent = (value / maxRange).clamp(0.0, 1.0);
+    if (reverse) {
+      percent = (1.0 - percent).clamp(0.0, 1.0);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500)),
+              Text("${(percent * 100).toInt()}%", style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+            ],
+          ),
+          const SizedBox(height: 5),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: percent,
+              backgroundColor: color.withValues(alpha: 0.1),
+              color: color,
+              minHeight: 8,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- CHART BUILDERS ---
+
+  LineTouchData _getLineTouchData() {
+    return LineTouchData(
+      touchTooltipData: LineTouchTooltipData(
+          getTooltipItems: (touchedSpots) {
+            return touchedSpots.map((spot) {
+              final date = _filteredEntries[spot.spotIndex].date;
+              return LineTooltipItem(
+                "${DateFormat('MMM d').format(date)}\nValue: ${spot.y.toStringAsFixed(1)}",
+                const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              );
+            }).toList();
+          }
+      ),
+      touchCallback: (event, response) {
+        if (event is FlTapUpEvent && response?.lineBarSpots != null) {
+          _showShortcutsDialog(_filteredEntries[response!.lineBarSpots![0].spotIndex]);
+        }
+      },
+    );
+  }
+
+  Widget _buildMoodChart() {
+    return LineChart(LineChartData(
+      lineTouchData: _getLineTouchData(),
+      lineBarsData: [LineChartBarData(
+        spots: _filteredEntries.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.moodScore)).toList(),
+        isCurved: true, color: const Color(0xFF9575CD), barWidth: 3, dotData: const FlDotData(show: true),
+      )],
+      titlesData: _chartTitles(),
+      gridData: const FlGridData(show: false),
+      borderData: FlBorderData(show: false),
+      minY: 1, maxY: 5,
+    ));
+  }
+
+  Widget _buildStressChart() {
+    return LineChart(LineChartData(
+      lineTouchData: _getLineTouchData(),
+      extraLinesData: ExtraLinesData(horizontalLines: [
+        HorizontalLine(
+            y: _stressThreshold,
+            color: Colors.orange.withValues(alpha: 0.3),
+            strokeWidth: 2,
+            dashArray: [5, 5],
+            label: HorizontalLineLabel(show: true, alignment: Alignment.topRight, labelResolver: (_) => "Limit")
+        )
+      ]),
+      lineBarsData: [LineChartBarData(
+        spots: _filteredEntries.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.stressLevel)).toList(),
+        isCurved: true, color: Colors.orange, barWidth: 3, dotData: const FlDotData(show: true),
+      )],
+      titlesData: _chartTitles(lInterval: 2, max: 10),
+      gridData: const FlGridData(show: false),
+      borderData: FlBorderData(show: false),
+      minY: 0, maxY: 10,
+    ));
+  }
+
+  Widget _buildSleepChart() {
+    return BarChart(BarChartData(
+      extraLinesData: ExtraLinesData(horizontalLines: [
+        HorizontalLine(
+            y: _sleepGoal,
+            color: Colors.blue.withValues(alpha: 0.3),
+            strokeWidth: 2,
+            dashArray: [5, 5],
+            label: HorizontalLineLabel(show: true, labelResolver: (_) => "Goal")
+        )
+      ]),
+      barTouchData: BarTouchData(
+          touchTooltipData: BarTouchTooltipData(
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                final date = _filteredEntries[groupIndex].date;
+                return BarTooltipItem(
+                  "${DateFormat('MMM d').format(date)}\n${rod.toY} hrs",
+                  const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                );
+              }
+          ),
+          touchCallback: (event, response) {
+            if (event is FlTapUpEvent && response?.spot != null) {
+              _showShortcutsDialog(_filteredEntries[response!.spot!.touchedBarGroupIndex]);
+            }
+          }
+      ),
+      barGroups: _filteredEntries.asMap().entries.map((e) => BarChartGroupData(x: e.key, barRods: [BarChartRodData(toY: e.value.sleepHours, color: Colors.blue, width: 8)])).toList(),
+      titlesData: _chartTitles(lInterval: 3, max: 12),
+      gridData: const FlGridData(show: false),
+      borderData: FlBorderData(show: false),
+      minY: 0, maxY: 12,
+    ));
+  }
+
+  FlTitlesData _chartTitles({double lInterval = 1, double max = 5}) {
+    return FlTitlesData(
+      bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 1, getTitlesWidget: (v, m) {
+        int i = v.toInt();
+        if (i < 0 || i >= _filteredEntries.length) return const SizedBox();
+        return Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Text(DateFormat(selectedPeriod == TimePeriod.year ? 'MMM' : 'd').format(_filteredEntries[i].date),
+              style: const TextStyle(fontSize: 9)),
+        );
+      })),
+      leftTitles: AxisTitles(sideTitles: SideTitles(
+          showTitles: true,
+          interval: lInterval,
+          reservedSize: 40,
+          getTitlesWidget: (value, meta) {
+            if (value > max) return const SizedBox();
+            return Text(value.toInt().toString(), style: const TextStyle(fontSize: 10));
+          }
+      )),
+      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    );
+  }
+
+  Map<String, String> _generatePatternInsights() {
+    final current = _filteredEntries;
+    if (current.isEmpty) {
+      return {
+        "trend": "Start logging to see patterns",
+        "activity": "No habits identified yet",
+        "mood": "Consistency is key!"
+      };
+    }
+
+    double totalMood = _calculateAverage((e) => e.moodScore);
+    double totalSleep = _calculateAverage((e) => e.sleepHours);
+    Map<String, int> stressActivities = {};
+
+    for (final entry in current) {
+      if (entry.stressLevel >= 7) {
+        for (final entryMap in entry.shortcuts.entries) {
+          for (final item in entryMap.value) {
+            stressActivities[item] = (stressActivities[item] ?? 0) + 1;
+          }
+        }
+      }
+    }
+
+    String trendIndicator = "Avg mood is ${totalMood.toStringAsFixed(1)} ${_getEmoji(totalMood)}";
+    if (totalMood <= 2.0) {
+      trendIndicator += ". You're doing great!";
+    } else if (totalMood >= 4.0) {
+      trendIndicator += ". Take some time to rest.";
+    }
+
+    String topTrigger = stressActivities.isEmpty
+        ? "no specific triggers"
+        : stressActivities.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+
+    return {
+      "trend": trendIndicator,
+      "activity": "Stress often occurs with '$topTrigger'.",
+      "mood": "Avg Sleep: ${totalSleep.toStringAsFixed(1)}h.",
+    };
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFF9575CD))));
+    if (isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+
+    final avgMood = _calculateAverage((e) => e.moodScore);
+    final avgStress = _calculateAverage((e) => e.stressLevel);
+    final avgSleep = _calculateAverage((e) => e.sleepHours);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -155,7 +358,6 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
         title: Text('Progress Insight', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
         backgroundColor: const Color(0xFF9575CD),
         elevation: 0,
-        actions: [IconButton(onPressed: _fetchFirebaseData, icon: const Icon(Icons.refresh, color: Colors.white))],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -163,223 +365,126 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildPeriodToggles(),
-            const SizedBox(height: 25),
-
-            Text('Current Week Activity', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            _buildWeeklyHabitRow(),
-
-            const SizedBox(height: 25),
-            _buildSummaryCard(),
-
-            const SizedBox(height: 30),
-            _sectionTitle('Mood Trend'),
-            _buildMoodChart(),
-
-            const SizedBox(height: 30),
-            _sectionTitle('Stress Levels'),
-            _buildStressChart(),
-
-            const SizedBox(height: 30),
-            _sectionTitle('Key Goal Progress'),
-            _buildProgressBar(title: 'Positivity Rate', currentValue: _positivityRate, color: Colors.green),
-            _buildProgressBar(title: 'Sleep Consistency (Target 8h)', currentValue: _avgSleep / 8, color: Colors.blue),
+            const SizedBox(height: 15),
+            _buildGlobalDateNav(),
             const SizedBox(height: 20),
+
+            // --- ALL CHARTS TOP ---
+            _buildSectionTitle('Mood Trend'),
+            _buildChartContainer(const Color(0xFFF8F4FF), _buildMoodChart()),
+            const SizedBox(height: 25),
+
+            _buildSectionTitle('Stress Levels'),
+            _buildChartContainer(const Color(0xFFFFF8F0), _buildStressChart()),
+            const SizedBox(height: 25),
+
+            _buildSectionTitle('Sleep Duration'),
+            _buildChartContainer(const Color(0xFFF0F7FF), _buildSleepChart()),
+            const SizedBox(height: 35),
+
+            // --- ALL PERCENTAGE BARS MIDDLE ---
+            Text('Summary Scores', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 15),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Column(
+                children: [
+                  _buildProgressBar("Happiness Level", 5 - avgMood, 4, const Color(0xFF9575CD)),
+                  _buildProgressBar("Calmness Score", avgStress, 10, Colors.orange, reverse: true),
+                  _buildProgressBar("Sleep Goal (${_sleepGoal}h)", avgSleep, _sleepGoal, Colors.blue),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 35),
+
+            // --- AI INSIGHTS BOTTOM ---
+            Text('AI Insights & Trends', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            _buildInsightSummaryCard(),
+            const SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
 
-  // === WIDGET COMPONENTS ===
-
-  Widget _sectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Text('$title (${selectedPeriod.name.toUpperCase()})',
-          style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
+  Widget _buildGlobalDateNav() {
+    String label = selectedPeriod == TimePeriod.month
+        ? DateFormat('MMMM yyyy').format(_focusedDate)
+        : (selectedPeriod == TimePeriod.year
+        ? DateFormat('yyyy').format(_focusedDate)
+        : "Week of ${DateFormat('MMM d').format(_getMonday(_focusedDate))}");
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => setState(() {
+            if (selectedPeriod == TimePeriod.month) {
+              _focusedDate = DateTime(_focusedDate.year, _focusedDate.month - 1);
+            } else if (selectedPeriod == TimePeriod.year) {
+              _focusedDate = DateTime(_focusedDate.year - 1);
+            } else {
+              _focusedDate = _focusedDate.subtract(const Duration(days: 7));
+            }
+          })),
+          Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14)),
+          IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => setState(() {
+            if (selectedPeriod == TimePeriod.month) {
+              _focusedDate = DateTime(_focusedDate.year, _focusedDate.month + 1);
+            } else if (selectedPeriod == TimePeriod.year) {
+              _focusedDate = DateTime(_focusedDate.year + 1);
+            } else {
+              _focusedDate = _focusedDate.add(const Duration(days: 7));
+            }
+          })),
+        ],
+      ),
     );
+  }
+
+  Widget _buildChartContainer(Color color, Widget chart) {
+    if (_filteredEntries.isEmpty) {
+      return Container(height: 100, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(15)), child: const Center(child: Text("No entries found")));
+    }
+    return Container(height: 220, padding: const EdgeInsets.fromLTRB(10, 20, 20, 10), decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(15)), child: chart);
+  }
+
+  Widget _buildInsightSummaryCard() {
+    final data = _generatePatternInsights();
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF9575CD), Color(0xFF673AB7)]), borderRadius: BorderRadius.circular(20)),
+      child: Column(children: [
+        _insightItem(Icons.trending_up, data['trend']!),
+        const Divider(color: Colors.white24, height: 20),
+        _insightItem(Icons.star, data['activity']!),
+        const Divider(color: Colors.white24, height: 20),
+        _insightItem(Icons.analytics, data['mood']!)
+      ]),
+    );
+  }
+
+  Widget _insightItem(IconData icon, String text) {
+    return Row(children: [Icon(icon, color: Colors.white70, size: 20), const SizedBox(width: 15), Expanded(child: Text(text, style: GoogleFonts.poppins(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)))]);
   }
 
   Widget _buildPeriodToggles() {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-      child: Row(
-        children: TimePeriod.values.map((period) {
-          bool isSelected = selectedPeriod == period;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => selectedPeriod = period),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF9575CD) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(period.name.toUpperCase(),
-                      style: TextStyle(color: isSelected ? Colors.white : Colors.black54, fontWeight: FontWeight.bold, fontSize: 12)),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
+      child: Row(children: TimePeriod.values.map((p) => Expanded(child: GestureDetector(onTap: () => setState(() => selectedPeriod = p), child: Container(padding: const EdgeInsets.symmetric(vertical: 10), decoration: BoxDecoration(color: selectedPeriod == p ? const Color(0xFF9575CD) : Colors.transparent, borderRadius: BorderRadius.circular(10)), child: Center(child: Text(p.name.toUpperCase(), style: TextStyle(color: selectedPeriod == p ? Colors.white : Colors.black54, fontWeight: FontWeight.bold, fontSize: 12))))))).toList()),
     );
   }
 
-  Widget _buildWeeklyHabitRow() {
-    final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFFF3E5F5), borderRadius: BorderRadius.circular(15)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(7, (index) {
-          final date = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day).add(Duration(days: index));
-
-          // Check if user has an entry for this specific day
-          final dayEntry = allEntries.cast<MoodEntry?>().firstWhere(
-                (e) => e?.date.day == date.day && e?.date.month == date.month && e?.date.year == date.year,
-            orElse: () => null,
-          );
-
-          bool isToday = date.day == now.day && date.month == now.month;
-
-          return Column(
-            children: [
-              Text(DateFormat('E').format(date)[0], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
-              const SizedBox(height: 5),
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: dayEntry != null ? Colors.white : Colors.white.withOpacity(0.4),
-                child: dayEntry != null
-                    ? Text(_getMoodEmoji(dayEntry.moodScore), style: const TextStyle(fontSize: 18))
-                    : const Icon(Icons.close, size: 16, color: Colors.grey),
-              ),
-              const SizedBox(height: 5),
-              Text(date.day.toString(), style: TextStyle(fontSize: 11, fontWeight: isToday ? FontWeight.bold : FontWeight.normal)),
-            ],
-          );
-        }),
-      ),
-    );
-  }
-
-  Widget _buildMoodChart() {
-    if (_filteredEntries.isEmpty) return _emptyState();
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.fromLTRB(5, 20, 20, 10),
-      decoration: BoxDecoration(color: const Color(0xFFF8F4FF), borderRadius: BorderRadius.circular(15)),
-      child: LineChart(
-        LineChartData(
-          lineBarsData: [
-            LineChartBarData(
-              spots: _filteredEntries.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.moodScore)).toList(),
-              isCurved: true, color: const Color(0xFF9575CD), barWidth: 3, dotData: const FlDotData(show: false),
-              belowBarData: BarAreaData(show: true, color: const Color(0xFF9575CD).withOpacity(0.1)),
-            ),
-          ],
-          titlesData: FlTitlesData(
-            bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30, interval: _getLabelInterval(), getTitlesWidget: _bottomTitles)),
-            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30, interval: 1)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 1),
-          borderData: FlBorderData(show: false),
-          minY: 1, maxY: 5, // Mood scale 1-5
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStressChart() {
-    if (_filteredEntries.isEmpty) return _emptyState();
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.fromLTRB(5, 20, 20, 10),
-      decoration: BoxDecoration(color: const Color(0xFFFFF8F0), borderRadius: BorderRadius.circular(15)),
-      child: LineChart(
-        LineChartData(
-          lineBarsData: [
-            LineChartBarData(
-              spots: _filteredEntries.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.stressLevel)).toList(),
-              isCurved: true, color: Colors.orange, barWidth: 3, dotData: const FlDotData(show: false),
-              belowBarData: BarAreaData(show: true, color: Colors.orange.withOpacity(0.1)),
-            ),
-          ],
-          titlesData: FlTitlesData(
-            bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30, interval: _getLabelInterval(), getTitlesWidget: _bottomTitles)),
-            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30, interval: 2)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          gridData: FlGridData(show: true, drawVerticalLine: false),
-          borderData: FlBorderData(show: false),
-          minY: 1, maxY: 10, // Stress scale 1-10
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.grey[200]!)),
-      child: Row(
-        children: [
-          Text(_summaryEmoji, style: const TextStyle(fontSize: 40)),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Mental Wellness Summary', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-                Text(
-                    _filteredEntries.isEmpty
-                        ? "Start logging to see your trends!"
-                        : "Your average mood is ${(_avgMood).toStringAsFixed(1)}. You're doing great on consistency!",
-                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressBar({required String title, required double currentValue, required Color color}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500)),
-              Text('${(currentValue * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 5),
-          LinearProgressIndicator(value: currentValue.clamp(0, 1), backgroundColor: Colors.grey[200], color: color, minHeight: 8, borderRadius: BorderRadius.circular(10)),
-        ],
-      ),
-    );
-  }
-
-  Widget _emptyState() {
-    return Container(
-      height: 150,
-      width: double.infinity,
-      decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(15)),
-      child: Center(child: Text("No data for this period", style: GoogleFonts.poppins(color: Colors.grey))),
-    );
+  Widget _buildSectionTitle(String title) {
+    return Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(title, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold)));
   }
 }
