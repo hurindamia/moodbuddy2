@@ -35,6 +35,14 @@ class MoodBuddyApp extends StatelessWidget {
         '/register': (_) => const RegisterScreen(),
         '/home': (_) => const MainLayout(initialIndex:0),
         '/moodtracker': (_) => const MoodTrackerScreen(),
+        '/mood': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments;
+          final initialMood = args is double ? args : null;
+
+          return MoodTrackerScreen(
+            initialMood: initialMood,
+          );
+        },
         '/resources': (_) => const ResourceLibraryScreen(),
         '/progress': (_) => const ProgressInsightScreen(),
         '/hotline': (_) => const HotlineScreen(),

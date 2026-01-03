@@ -55,7 +55,7 @@ class ProgressSummaryCard extends StatelessWidget {
 
           // Progress bar
           Text(
-            "Weekly Progress",
+            "Weekly Check-in Progress",
             style: GoogleFonts.poppins(fontSize: 14, color: Colors.black54),
           ),
           const SizedBox(height: 6),

@@ -53,7 +53,6 @@ class ActivitiesScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: ListView(
                     children: [
-                      // REMOVED 'const' TO FIX THE ERROR
                       _activityBox(context, "Breathing", "4-7-8 Technique", Icons.air, Colors.white, BreathingScreen(selectedDate: selectedDate,)),
                       const SizedBox(height: 20),
                       _activityBox(context, "Meditate", "Relaxation Timer", Icons.self_improvement, Colors.white, const MeditationScreen()),

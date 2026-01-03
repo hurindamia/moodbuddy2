@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class MoodQuickButtons extends StatelessWidget {
-  final void Function(String mood) onMoodSelected;
+  final void Function(double mood) onMoodSelected;
 
   const MoodQuickButtons({
     super.key,
@@ -11,11 +11,11 @@ class MoodQuickButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final moods = [
-      {'emoji': '😊', 'value': 'happy'},
-      {'emoji': '😐', 'value': 'neutral'},
-      {'emoji': '😣', 'value': 'stressed'},
-      {'emoji': '😭', 'value': 'sad'},
-      {'emoji': '🤩', 'value': 'excited'},
+      {'emoji': '😄', 'score': 1.0}, // Great
+      {'emoji': '🙂', 'score': 2.0}, // Good
+      {'emoji': '😐', 'score': 3.0}, // Okay
+      {'emoji': '🙁', 'score': 4.0}, // Bad
+      {'emoji': '😖', 'score': 5.0}, // Awful
     ];
 
     return Column(
@@ -35,7 +35,7 @@ class MoodQuickButtons extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: moods.map((m) {
             return GestureDetector(
-              onTap: () => onMoodSelected(m['value']!),
+              onTap: () => onMoodSelected(m['score'] as double),
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -50,7 +50,7 @@ class MoodQuickButtons extends StatelessWidget {
                   ],
                 ),
                 child: Text(
-                  m['emoji']!,
+                  m['emoji'] as String,
                   style: const TextStyle(fontSize: 26),
                 ),
               ),
