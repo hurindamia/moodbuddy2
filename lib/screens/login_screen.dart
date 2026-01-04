@@ -54,14 +54,18 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text("MoodBuddy", style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Color(0xFF7B2CBF))),
-              const SizedBox(height: 40),
+              Image.asset(
+              'assets/images/moodbuddy_logo3.png',
+              height: 300,
+            ),
+            const SizedBox(height: 16),
+              const SizedBox(height: 10),
               TextField(controller: email, decoration: const InputDecoration(labelText: "Email", border: OutlineInputBorder())),
               const SizedBox(height: 20),
               TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: "Password", border: OutlineInputBorder())),
               const SizedBox(height: 30),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7B2CBF), minimumSize: const Size(double.infinity, 50)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 94, 53, 129), minimumSize: const Size(double.infinity, 50)),
                 onPressed: _login,
                 child: const Text("Login", style: TextStyle(color: Colors.white, fontSize: 18)),
               ),

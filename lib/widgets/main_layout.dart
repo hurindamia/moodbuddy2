@@ -3,7 +3,7 @@ import '../screens/home_screen.dart';
 import '../screens/mood_tracker_screen.dart';
 import '../screens/resource_library_screen.dart';
 import '../screens/progress_insight_screen.dart';
-import '../screens/hotline_screen.dart';
+import '../screens/hotline/hotline_screen.dart';
 import '../app_theme.dart';
 
 class MainLayout extends StatefulWidget {

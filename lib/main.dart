@@ -8,7 +8,7 @@ import 'screens/register_screen.dart';
 import 'screens/mood_tracker_screen.dart';
 import 'screens/resource_library_screen.dart';
 import 'screens/progress_insight_screen.dart';
-import 'screens/hotline_screen.dart';
+import 'screens/hotline/hotline_screen.dart';
 import 'widgets/main_layout.dart';
 
 void main() async {

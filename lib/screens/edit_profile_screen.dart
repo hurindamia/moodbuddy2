@@ -193,7 +193,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ? (pickedImagePath!.startsWith('http')
                               ? NetworkImage(pickedImagePath!)
                               : FileImage(File(pickedImagePath!))) as ImageProvider
-                              : const AssetImage('assets/images/profile.png') as ImageProvider<Object>?,
+                              : const AssetImage('assets/images/profile.png'),
                           child: const Align(
                             alignment: Alignment.bottomRight,
                             child: CircleAvatar(
@@ -205,17 +205,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                       ),
                     ),
-                    // ------------------------------------------------------------------
 
                     const SizedBox(height: 25),
 
-                    /// ---- Input Fields (Omitted for brevity) ----
+                    /// ---- Input Fields ----
                     _buildInput("Full name / Nickname", nameCtrl),
                     const SizedBox(height: 15),
+
                     _buildInput("Email", emailCtrl),
                     const SizedBox(height: 15),
+
                     _buildInput("Emergency contact name", emergencyNameCtrl),
                     const SizedBox(height: 15),
+
                     _buildInput("Emergency contact phone", emergencyPhoneCtrl),
                     const SizedBox(height: 30),
 
