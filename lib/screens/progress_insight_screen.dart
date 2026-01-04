@@ -32,7 +32,8 @@ class MoodEntry {
       shortcuts: data.containsKey('shortcuts')
           ? (data['shortcuts'] as Map<String, dynamic>).map(
             (k, v) => MapEntry(k, List<String>.from(v)),
-      ) : {},
+      )
+          : {},
     );
   }
 }
@@ -235,6 +236,8 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
       gridData: const FlGridData(show: false),
       borderData: FlBorderData(show: false),
       minY: 1, maxY: 5,
+      minX: selectedPeriod == TimePeriod.week ? null : -0.5,
+      maxX: selectedPeriod == TimePeriod.week ? null : _filteredEntries.length - 0.5,
     ));
   }
 
@@ -258,6 +261,8 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
       gridData: const FlGridData(show: false),
       borderData: FlBorderData(show: false),
       minY: 0, maxY: 10,
+      minX: selectedPeriod == TimePeriod.week ? null : -0.5,
+      maxX: selectedPeriod == TimePeriod.week ? null : _filteredEntries.length - 0.5,
     ));
   }
 
@@ -293,20 +298,31 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
       gridData: const FlGridData(show: false),
       borderData: FlBorderData(show: false),
       minY: 0, maxY: 12,
+      alignment: BarChartAlignment.spaceAround,
     ));
   }
 
   FlTitlesData _chartTitles({double lInterval = 1, double max = 5}) {
     return FlTitlesData(
-      bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 1, getTitlesWidget: (v, m) {
-        int i = v.toInt();
-        if (i < 0 || i >= _filteredEntries.length) return const SizedBox();
-        return Padding(
-          padding: const EdgeInsets.only(top: 8.0),
-          child: Text(DateFormat(selectedPeriod == TimePeriod.year ? 'MMM' : 'd').format(_filteredEntries[i].date),
-              style: const TextStyle(fontSize: 9)),
-        );
-      })),
+      bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+              showTitles: selectedPeriod == TimePeriod.week,
+              interval: 1,
+              reservedSize: selectedPeriod == TimePeriod.week ? 30 : 10,
+              getTitlesWidget: (v, m) {
+                if (selectedPeriod != TimePeriod.week) return const SizedBox();
+                int i = v.toInt();
+                if (i < 0 || i >= _filteredEntries.length) return const SizedBox();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    DateFormat('d').format(_filteredEntries[i].date),
+                    style: const TextStyle(fontSize: 9),
+                  ),
+                );
+              }
+          )
+      ),
       leftTitles: AxisTitles(sideTitles: SideTitles(
           showTitles: true,
           interval: lInterval,
@@ -365,9 +381,8 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    if (_isLoadingBadges) {
-      return const Center(child: CircularProgressIndicator());
+    if (isLoading || _isLoadingBadges) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final avgMood = _calculateAverage((e) => e.moodScore);
@@ -381,72 +396,85 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
         backgroundColor: const Color(0xFF9575CD),
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildPeriodToggles(),
-            const SizedBox(height: 15),
-            _buildGlobalDateNav(),
-            const SizedBox(height: 20),
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/background1.png'),
+            fit: BoxFit.cover,
+            opacity: 0.8,
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildPeriodToggles(),
+              const SizedBox(height: 15),
+              _buildGlobalDateNav(),
+              const SizedBox(height: 20),
 
-            // --- ALL CHARTS TOP ---
-            _buildSectionTitle('Mood Trend'),
-            _buildChartContainer(const Color(0xFFF8F4FF), _buildMoodChart()),
-            const SizedBox(height: 25),
+              // --- WEEKLY SNAPSHOT ---
+              _buildWeeklySnapshot(),
+              const SizedBox(height: 25),
 
-            _buildSectionTitle('Stress Levels'),
-            _buildChartContainer(const Color(0xFFFFF8F0), _buildStressChart()),
-            const SizedBox(height: 25),
+              // --- ALL CHARTS TOP ---
+              _buildSectionTitle('Mood Trend'),
+              _buildChartContainer(const Color(0xFFF8F4FF), _buildMoodChart()),
+              const SizedBox(height: 25),
 
-            _buildSectionTitle('Sleep Duration'),
-            _buildChartContainer(const Color(0xFFF0F7FF), _buildSleepChart()),
-            const SizedBox(height: 35),
+              _buildSectionTitle('Stress Levels'),
+              _buildChartContainer(const Color(0xFFFFF8F0), _buildStressChart()),
+              const SizedBox(height: 25),
 
-            // --- ALL PERCENTAGE BARS MIDDLE ---
-            Text('Summary Scores', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 15),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.grey[200]!),
+              _buildSectionTitle('Sleep Duration'),
+              _buildChartContainer(const Color(0xFFF0F7FF), _buildSleepChart()),
+              const SizedBox(height: 35),
+
+              // --- ALL PERCENTAGE BARS MIDDLE ---
+              Text('Summary Scores', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 15),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  children: [
+                    _buildProgressBar("Happiness Level", 5 - avgMood, 4, const Color(0xFF9575CD)),
+                    _buildProgressBar("Calmness Score", avgStress, 10, Colors.orange, reverse: true),
+                    _buildProgressBar("Sleep Goal (${_sleepGoal}h)", avgSleep, _sleepGoal, Colors.blue),
+                  ],
+                ),
               ),
-              child: Column(
+
+              const SizedBox(height: 35),
+
+              // --- AI INSIGHTS BOTTOM ---
+              Text('AI Insights & Trends', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              _buildInsightSummaryCard(),
+              const SizedBox(height: 40),
+
+              ExpansionTile(
+                title: Text(
+                  "Achievements",
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 children: [
-                  _buildProgressBar("Happiness Level", 5 - avgMood, 4, const Color(0xFF9575CD)),
-                  _buildProgressBar("Calmness Score", avgStress, 10, Colors.orange, reverse: true),
-                  _buildProgressBar("Sleep Goal (${_sleepGoal}h)", avgSleep, _sleepGoal, Colors.blue),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: _buildAchievementsGrid(unlockedBadges),
+                  ),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 35),
-
-            // --- AI INSIGHTS BOTTOM ---
-            Text('AI Insights & Trends', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            _buildInsightSummaryCard(),
-            const SizedBox(height: 40),
-
-            ExpansionTile(
-              title: Text(
-                "Achievements",
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _buildAchievementsGrid(unlockedBadges),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -524,6 +552,110 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(title, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold)));
+  }
+
+  Widget _buildWeeklySnapshot() {
+    // Get the days to display and title
+    DateTime startDay;
+    String title;
+
+    if (selectedPeriod == TimePeriod.week) {
+      startDay = _getMonday(_focusedDate);
+      title = 'Weekly Snapshot';
+    } else if (selectedPeriod == TimePeriod.month) {
+      // Days 1-7 of the month
+      startDay = DateTime(_focusedDate.year, _focusedDate.month, 1);
+      title = 'First Week of the Month';
+    } else {
+      // Days 1-7 of the year
+      startDay = DateTime(_focusedDate.year, 1, 1);
+      title = 'First Week of the Year';
+    }
+
+    List<Widget> dayWidgets = [];
+    for (int i = 0; i < 7; i++) {
+      DateTime currentDay = startDay.add(Duration(days: i));
+
+      // Find mood entry for this day
+      MoodEntry? dayEntry;
+      try {
+        dayEntry = allEntries.firstWhere(
+                (entry) =>
+            entry.date.year == currentDay.year &&
+                entry.date.month == currentDay.month &&
+                entry.date.day == currentDay.day
+        );
+      } catch (e) {
+        dayEntry = null;
+      }
+
+      String emoji = dayEntry != null ? _getEmoji(dayEntry.moodScore) : '—';
+      String dayName = DateFormat('E').format(currentDay).substring(0, 1);
+      String dayNum = currentDay.day.toString();
+
+      dayWidgets.add(
+        Expanded(
+          child: Column(
+            children: [
+              Text(
+                dayName,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: dayEntry != null ? const Color(0xFFF8F4FF) : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  emoji,
+                  style: const TextStyle(fontSize: 24),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                dayNum,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: dayWidgets,
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildAchievementsGrid(List<dynamic> unlockedBadges) {

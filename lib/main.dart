@@ -1,5 +1,3 @@
-// ignore: unused_import
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -14,14 +12,11 @@ import 'screens/profile_screen.dart';
 import 'screens/hotline/hotline_screen.dart';
 import 'widgets/main_layout.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform, // if using FlutterFire CLI
+    options: DefaultFirebaseOptions.currentPlatform,
   );
-  //await dotenv.load(fileName: ".env");
-  //print(dotenv.env['HF_API_KEY']); // should print your key
   runApp(const MoodBuddyApp());
 }
 
@@ -39,11 +34,13 @@ class MoodBuddyApp extends StatelessWidget {
         '/welcome': (_) => const WelcomeScreen(),
         '/login': (_) => const LoginScreen(),
         '/register': (_) => const RegisterScreen(),
-        '/home': (_) => const MainLayout(initialIndex:0),
+        // REMOVED 'const' from dynamic layouts
+        '/home': (_) => MainLayout(initialIndex: 0),
         '/moodtracker': (_) => MoodTrackerScreen(),
         '/resources': (_) => ResourceLibraryScreen(),
         '/progress': (_) => ProgressInsightScreen(),
         '/hotline': (_) => HotlineScreen(),
+        // ProfileScreen now works without arguments
         '/profile': (_) => const ProfileScreen(),
       },
     );

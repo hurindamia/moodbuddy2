@@ -34,7 +34,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
     SupportOption(
       title: 'Unit Kaunseling USM',
       description: 'Unit Kaunseling USM provides professional counselling and '
-          'psychological services to support students’ emotional wellbeing, '
+          'psychological services to support students\' emotional wellbeing, '
           'academic adjustment, and personal development.\n\n'
           'Students may seek help for stress, anxiety, academic pressure, '
           'personal concerns, or adjustment to university life.',
@@ -79,7 +79,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
     SupportOption(
       title: 'Pusat Sejahtera USM',
       description:
-          'Pusat Sejahtera USM is the primary healthcare centre for students '
+      'Pusat Sejahtera USM is the primary healthcare centre for students '
           'and staff at Universiti Sains Malaysia.\n\n'
           'It provides medical and wellbeing services including mental health '
           'support, basic medical consultations, and referrals to specialist care.\n\n'
@@ -112,7 +112,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
         const ClinicCard(
           name: 'Klinik Kesihatan Sungai Dua',
           address:
-              'Jalan Pinang, Kampung Dua Bukit, 11700 Gelugor, Pulau Pinang',
+          'Jalan Pinang, Kampung Dua Bukit, 11700 Gelugor, Pulau Pinang',
           phone: '+604-642 2201',
           locationQuery: 'Klinik Kesihatan Sungai Dua',
           imagePath: 'assets/images/kk.jpg',
@@ -120,7 +120,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
         const ClinicCard(
           name: 'Mintygreen Psychological & Counseling Services',
           address:
-              '1-1-9, Imperial Grande, Persiaran Relau, Kampung Darat, 11900 Bayan Lepas, Pulau Pinang',
+          '1-1-9, Imperial Grande, Persiaran Relau, Kampung Darat, 11900 Bayan Lepas, Pulau Pinang',
           phone: '+60 18-205 2528',
           locationQuery: 'Mintygreen Bayan Lepas',
           imagePath: 'assets/images/mintygreen.jpg',
@@ -128,7 +128,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
         const ClinicCard(
           name: 'Blue Mind Specialist Clinic (Psychiatry)',
           address:
-              'B-12, 1, Lorong Bayan Indah 3, Bay Avenue, 11900 Bayan Lepas, Pulau Pinang',
+          'B-12, 1, Lorong Bayan Indah 3, Bay Avenue, 11900 Bayan Lepas, Pulau Pinang',
           phone: '+6011-5657 6877',
           locationQuery: 'Blue Mind Specialist Clinic (Psychiatry)',
           imagePath: 'assets/images/blue_mind.jpg',
@@ -136,7 +136,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
         const ClinicCard(
           name: 'Carpe Diem Counseling & Consulting Centre',
           address:
-              '723-J-1, Vanda Business Park, Jalan Sungai Dua, 11700 Gelugor, Penang, Jalan Sungai Dua, 11700 Gelugor, Penang',
+          '723-J-1, Vanda Business Park, Jalan Sungai Dua, 11700 Gelugor, Penang, Jalan Sungai Dua, 11700 Gelugor, Penang',
           phone: '+6012-281 0045',
           locationQuery: 'Carpe Diem Counseling & Consulting 卡比典心灵成长工作室',
           imagePath: 'assets/images/carpe.jpg',
@@ -144,7 +144,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
         const ClinicCard(
           name: 'Persatuan Minda DHome',
           address:
-              '66, Lintang Bukit Jambul, Bukit Jambul, 11900 Bayan Lepas, Pulau Pinang',
+          '66, Lintang Bukit Jambul, Bukit Jambul, 11900 Bayan Lepas, Pulau Pinang',
           phone: '+604-291 0111',
           locationQuery: 'Persatuan Minda DHome',
           imagePath: 'assets/images/dhome.jpg',
@@ -194,10 +194,10 @@ class _HotlineScreenState extends State<HotlineScreen> {
      FIREBASE SAVE
   ========================== */
   Future<void> saveResult(
-    int totalScore,
-    double percentage,
-    Map<String, int> categoryScores,
-  ) async {
+      int totalScore,
+      double percentage,
+      Map<String, int> categoryScores,
+      ) async {
     final user = FirebaseAuth.instance.currentUser!;
     final result = SelfCheckResult(
       totalScore: totalScore,
@@ -214,8 +214,8 @@ class _HotlineScreenState extends State<HotlineScreen> {
   }
 
   Map<String, int> _calculateCategoryScores(
-    List<SelfCheckQuestion> questions,
-  ) {
+      List<SelfCheckQuestion> questions,
+      ) {
     final scores = {'stress': 0, 'anxiety': 0, 'mood': 0};
     for (final q in questions) {
       scores[q.category.name] = scores[q.category.name]! + q.score;
@@ -299,8 +299,8 @@ class _HotlineScreenState extends State<HotlineScreen> {
 
             const Text(
               'This self-check helps you reflect on how you have been feeling recently.\n\n'
-              'It is not a medical diagnosis.\n\n'
-              'You may stop at any time.',
+                  'It is not a medical diagnosis.\n\n'
+                  'You may stop at any time.',
             ),
           ],
         ),
@@ -390,7 +390,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
             // SUPPORTIVE MESSAGES
             ...List<Widget>.from(
               (result['message'] as List<String>).map(
-                (msg) => Padding(
+                    (msg) => Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Text(
                     '• $msg',
@@ -432,160 +432,176 @@ class _HotlineScreenState extends State<HotlineScreen> {
         title: const Text('Hotline & Self-Check'),
           backgroundColor: const Color(0xFF9575CD)
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          /* IMAGE */
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Image.asset(
-              'assets/images/moodbuddy12.png',
-              width: 250,
-              fit: BoxFit.fitWidth,
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/background1.png'),
+            fit: BoxFit.cover,
+            opacity: 0.8,
           ),
-          Text(
-            'We’re glad you’re here.\n'
-            'Take a moment to check in with yourself — support is always available.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              color: Colors.grey.shade700,
+        ),
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            /* IMAGE */
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.asset(
+                'assets/images/moodbuddy12.png',
+                width: 250,
+                fit: BoxFit.fitWidth,
+              ),
             ),
-          ),
+            Text(
+              'We\'re glad you\'re here.\n'
+                  'Take a moment to check in with yourself — support is always available.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                color: Colors.grey.shade700,
+              ),
+            ),
 
-          /* BLUE INFO BOX */
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(18),
+            /* BLUE INFO BOX */
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Text(
+                'This section helps USM students reflect on their emotional wellbeing '
+                    'and connect with appropriate campus and professional support.',
+                style: TextStyle(fontSize: 14),
+              ),
             ),
-            child: const Text(
-              'This section helps USM students reflect on their emotional wellbeing '
-              'and connect with appropriate campus and professional support.',
-              style: TextStyle(fontSize: 14),
-            ),
-          ),
-          const SizedBox(height: 30),
+            const SizedBox(height: 30),
 
-          /* SELF CHECK */
-          const Text(
-            'MoodBuddy Self-Check',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              padding: const EdgeInsets.symmetric(vertical: 14),
+            /* SELF CHECK */
+            const Text(
+              'MoodBuddy Self-Check',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            onPressed: _showPreTestDialog,
-            child: const Text(
-              'Start In-App Self-Check',
-              style: TextStyle(color: Colors.white),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: _showPreTestDialog,
+              child: const Text(
+                'Start In-App Self-Check',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _openOfficialDASS,
-            child: const Text('Take Official DASS Test (External)'),
-          ),
-          const SizedBox(height: 30),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF9575CD),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: _openOfficialDASS,
+              child: const Text(
+                'Take Official DASS Test (External)',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+            const SizedBox(height: 30),
 
-          /* HISTORY */
-          ElevatedButton.icon(
-            icon: const Icon(Icons.history, color: Colors.white),
-            label: const Text(
-              'View My Past Results',
-              style: TextStyle(color: Colors.white),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 111, 88, 153),
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ResultHistoryScreen(),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 30),
-
-          /* SUPPORT */
-          const Text(
-            'Find Student Support',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<SupportOption>(
-            initialValue: selectedSupport,
-            decoration: const InputDecoration(
-              labelText: 'Select support option',
-              border: OutlineInputBorder(),
-            ),
-            items: supportOptions
-                .map(
-                  (s) => DropdownMenuItem(
-                    value: s,
-                    child: Text(s.title),
+            /* HISTORY */
+            ElevatedButton.icon(
+              icon: const Icon(Icons.history, color: Colors.white),
+              label: const Text(
+                'View My Past Results',
+                style: TextStyle(color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 111, 88, 153),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ResultHistoryScreen(),
                   ),
-                )
-                .toList(),
-            onChanged: (val) {
-              setState(() => selectedSupport = val!);
-            },
-          ),
-          const SizedBox(height: 14),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
+                );
+              },
             ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => SupportDetailScreen(option: selectedSupport),
-                ),
-              );
-            },
-            child: const Text(
-              'View Support Details',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-          const SizedBox(height: 30),
+            const SizedBox(height: 30),
 
-          /* CALL SUPPORT */
-          const Text(
-            'Who to Call for Immediate Concern',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<CallSupportOption>(
-            initialValue: selectedCallOption,
-            decoration: const InputDecoration(
-              labelText: 'Select a support line',
-              border: OutlineInputBorder(),
+            /* SUPPORT */
+            const Text(
+              'Find Student Support',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            items: callSupportOptions
-                .map(
-                  (o) => DropdownMenuItem(
-                    value: o,
-                    child: Text(o.name),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<SupportOption>(
+              initialValue: selectedSupport,
+              decoration: const InputDecoration(
+                labelText: 'Select support option',
+                border: OutlineInputBorder(),
+              ),
+              items: supportOptions
+                  .map(
+                    (s) => DropdownMenuItem(
+                  value: s,
+                  child: Text(s.title),
+                ),
+              )
+                  .toList(),
+              onChanged: (val) {
+                setState(() => selectedSupport = val!);
+              },
+            ),
+            const SizedBox(height: 14),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SupportDetailScreen(option: selectedSupport),
                   ),
-                )
-                .toList(),
-            onChanged: (value) {
-              if (value != null) {
-                _callNumber(value.phone);
-              }
-            },
-          ),
-        ],
+                );
+              },
+              child: const Text(
+                'View Support Details',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+            const SizedBox(height: 30),
+
+            /* CALL SUPPORT */
+            const Text(
+              'Who to Call for Immediate Concern',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<CallSupportOption>(
+              initialValue: selectedCallOption,
+              decoration: const InputDecoration(
+                labelText: 'Select a support line',
+                border: OutlineInputBorder(),
+              ),
+              items: callSupportOptions
+                  .map(
+                    (o) => DropdownMenuItem(
+                  value: o,
+                  child: Text(o.name),
+                ),
+              )
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  _callNumber(value.phone);
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
