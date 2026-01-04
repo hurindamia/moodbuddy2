@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../app_theme.dart';
 
 class FeaturedResourceCard extends StatelessWidget {
   final String title;
@@ -17,36 +16,19 @@ class FeaturedResourceCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppTheme.primary.withValues(alpha:0.9),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 6,
-              offset: Offset(0, 4),
-            )
-          ],
+          color: Colors.white.withValues(alpha:0.9),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Row(
-          children: [
-            const Icon(Icons.book, size: 36, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
-          ],
+        child: Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
         ),
       ),
     );

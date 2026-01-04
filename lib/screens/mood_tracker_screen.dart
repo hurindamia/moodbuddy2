@@ -709,9 +709,9 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
         const SizedBox(width: 8),
         OutlinedButton(
           style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Color(0xFF512DA8)),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10)),
+            side: const BorderSide(color: Color(0xFF512DA8)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
           ),
           onPressed: () {
             setState(() {
