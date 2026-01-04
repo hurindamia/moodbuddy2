@@ -337,6 +337,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
                     selectedSupport = supportOptions.first; // Unit Kaunseling
                   });
 
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
@@ -521,7 +522,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<SupportOption>(
-            value: selectedSupport,
+            initialValue: selectedSupport,
             decoration: const InputDecoration(
               labelText: 'Select support option',
               border: OutlineInputBorder(),
@@ -565,7 +566,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<CallSupportOption>(
-            value: selectedCallOption,
+            initialValue: selectedCallOption,
             decoration: const InputDecoration(
               labelText: 'Select a support line',
               border: OutlineInputBorder(),
