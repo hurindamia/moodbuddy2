@@ -22,8 +22,7 @@ class _MainLayoutState extends State<MainLayout> {
     const MoodTrackerScreen(), // index 1
     const ResourceLibraryScreen(), // index 2
     const ProgressInsightScreen(), // index 3
-    // ignore: prefer_const_constructors
-    HotlineScreen(), // index 4
+    const HotlineScreen(), // index 4
   ];
 
   @override

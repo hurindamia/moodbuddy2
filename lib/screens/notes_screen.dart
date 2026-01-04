@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'resource_library_screen.dart';
 
 class NotesScreen extends StatefulWidget {
   final DateTime selectedDate;
@@ -39,6 +40,15 @@ class _NotesScreenState extends State<NotesScreen> {
         _sentiment = sentiment;
         _emoji = _getEmoji(sentiment);
       });
+
+      // Navigate to Resource Library after analysis
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const ResourceLibraryScreen(),
+        ),
+      );
+
 
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("User not logged in");

@@ -1,10 +1,14 @@
 import 'dart:ui';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'edit_profile_screen.dart';
 import 'privacy_policy_screen.dart';
 // ignore: unused_import
+import 'package:firebase_auth/firebase_auth.dart';
+
+// Ensure these files exist in the same directory (lib/screens/)
 import 'terms_service_screen.dart';
 import 'about_us.dart';
 
@@ -17,20 +21,53 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   // user data (in-memory)
-  String name = "Hurin Damia";
-  String email = "hdhur@example.com";
-  String aboutMe = "I love building helpful apps and learning UX.";
-  String emergencyName = "Aunty Siti";
-  String emergencyPhone = "+60 12-345 6789";
+  late String name = '';
+  late String email = '';
+  late String aboutMe = '';
+  late String emergencyName = '';
+  late String emergencyPhone = '';
   String? profileImage; // can be local path or URL; if null use asset
   bool acceptedPrivacy = false;
   bool acceptedTerms = false;
 
   @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    if (!mounted) return;
+
+    setState(() {
+      name = doc.data()?['name'] ?? 'User';
+      email = doc.data()?['email'] ?? user.email ?? '';
+      emergencyName = doc.data()?['emergencyName'] ?? '';
+      emergencyPhone = doc.data()?['emergencyPhone'] ?? '';
+      profileImage = doc.data()?['profileImage'];
+      aboutMe = doc.data()?['aboutMe'] ?? '';
+    });
+  }
+
+
+  @override
   Widget build(BuildContext context) {
     const cardPurple = Color(0xFF9575CD);
 
+    VoidCallback? _logout;
     return Scaffold(
+      appBar: AppBar(
+        title: Text('My Profile', style: GoogleFonts.poppins()),
+        backgroundColor: cardPurple,
+      ),
       body: Stack(
         children: [
           // Background image (network) and blur
@@ -38,6 +75,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Image.network(
               'https://i.pinimg.com/736x/7a/17/ac/7a17ac6c1baac75e8a95acfe9badd831.jpg',
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  Container(color: Colors.grey[200]), // Fallback
             ),
           ),
           Positioned.fill(
@@ -75,8 +114,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           backgroundColor: Colors.grey.shade200,
                           backgroundImage: profileImage != null
                               ? (profileImage!.startsWith('http')
-                              ? NetworkImage(profileImage!) as ImageProvider
-                              : FileImage(File(profileImage!)) as ImageProvider)
+                                  ? NetworkImage(profileImage!) as ImageProvider
+                                  : FileImage(File(profileImage!))
+                                      as ImageProvider)
                               : const AssetImage('assets/images/profile.png'),
                         ),
                         const SizedBox(height: 12),
@@ -101,6 +141,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 10),
                   _infoTile('Full Name', name),
                   _infoTile('Email', email),
+                  _infoTile('Full Name', name), // DYNAMIC
+                  _infoTile('Email', email), // DYNAMIC
 
                   const SizedBox(height: 18),
 
@@ -115,6 +157,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 22),
 
                   // ABOUT US BOX (same style as Privacy Policy)
+                  _infoTile('Name',
+                      emergencyName.isEmpty ? 'Not Set' : emergencyName),
+                  _infoTile('Phone',
+                      emergencyPhone.isEmpty ? 'Not Set' : emergencyPhone),
+
+                  const SizedBox(height: 22),
+
+                  // ABOUT US BOX
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
@@ -138,10 +188,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF9575CD).withOpacity(0.12),
+                                color:
+                                    const Color(0xFF9575CD).withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(Icons.info_outline, color: Color(0xFF9575CD)),
+                              child: const Icon(Icons.info_outline,
+                                  color: Color(0xFF9575CD)),
                             ),
                             const SizedBox(width: 12),
                             Text(
@@ -158,13 +210,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         // Clickable ListTile
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.arrow_right, color: Colors.black54),
-                          title: Text('View details', style: GoogleFonts.poppins()),
+                          leading: const Icon(Icons.arrow_right,
+                              color: Colors.black54),
+                          title: Text('View details',
+                              style: GoogleFonts.poppins()),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const AboutUsScreen()),
+                              MaterialPageRoute(
+                                  builder: (_) => const AboutUsScreen()),
                             );
                           },
                         ),
@@ -197,7 +252,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: cardPurple.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(Icons.policy, color: cardPurple),
+                              child:
+                                  const Icon(Icons.policy, color: cardPurple),
                             ),
                             const SizedBox(width: 12),
                             Text('Policies & Agreements',
@@ -211,17 +267,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(Icons.privacy_tip_outlined,
                               color: Colors.black54),
-                          title: Text('Privacy Policy', style: GoogleFonts.poppins()),
+                          title: Text('Privacy Policy',
+                              style: GoogleFonts.poppins()),
                           subtitle: Text(
                             'View details',
-                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                            style: GoogleFonts.poppins(
+                                fontSize: 12, color: Colors.grey),
                           ),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
                             final result = await Navigator.push<bool?>(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => PrivacyPolicyScreen(),
+                                builder: (_) => const PrivacyPolicyScreen(),
                               ),
                             );
 
@@ -236,19 +294,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         // Terms of Service row
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading:
-                          const Icon(Icons.description_outlined, color: Colors.black54),
-                          title: Text('Terms of Service', style: GoogleFonts.poppins()),
+                          leading: const Icon(Icons.description_outlined,
+                              color: Colors.black54),
+                          title: Text('Terms of Service',
+                              style: GoogleFonts.poppins()),
                           subtitle: Text(
                             'View details',
-                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                            style: GoogleFonts.poppins(
+                                fontSize: 12, color: Colors.grey),
                           ),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+                              MaterialPageRoute(
+                                  builder: (_) => const PrivacyPolicyScreen()),
                             );
+                            final result = await Navigator.push<bool?>(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const TermsServiceScreen()),
+                            );
+
+                            if (result == true) {
+                              setState(() => acceptedTerms = true);
+                            } else if (result == false) {
+                              setState(() => acceptedTerms = false);
+                            }
                           },
                         ),
                       ],
@@ -260,7 +332,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // Edit Profile button
                   ElevatedButton(
                     onPressed: () async {
-                      final updated = await Navigator.push<Map<String, dynamic>?>(
+                      // Navigate to EditProfileScreen and await result
+                      final updated =
+                          await Navigator.push<Map<String, dynamic>?>(
                         context,
                         MaterialPageRoute(
                           builder: (_) => EditProfileScreen(
@@ -274,13 +348,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       );
 
+                      // Update state if new data was returned
                       if (updated != null) {
                         setState(() {
                           name = updated['name'] ?? name;
                           email = updated['email'] ?? email;
                           aboutMe = updated['about'] ?? aboutMe;
-                          emergencyName = updated['emergencyName'] ?? emergencyName;
-                          emergencyPhone = updated['emergencyPhone'] ?? emergencyPhone;
+                          emergencyName =
+                              updated['emergencyName'] ?? emergencyName;
+                          emergencyPhone =
+                              updated['emergencyPhone'] ?? emergencyPhone;
                           profileImage = updated['image'] ?? profileImage;
                         });
                       }
@@ -292,7 +369,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text('Edit Profile',
-                        style: GoogleFonts.poppins(fontSize: 16, color: Colors.white)),
+                        style: GoogleFonts.poppins(
+                            fontSize: 16, color: Colors.white)),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  // LOGOUT BUTTON (Correctly placed inside the Column)
+                  ElevatedButton(
+                    onPressed:
+                        _logout, // Calls the Firebase sign-out and navigation function
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Colors.red.shade400, // Clear indicator for Logout
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text('Logout',
+                        style: GoogleFonts.poppins(
+                            fontSize: 16, color: Colors.white)),
                   ),
 
                   const SizedBox(height: 30),
@@ -311,7 +407,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3E5F5),
+        color: const Color(0xFFF3E5F5), // Light purple background
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

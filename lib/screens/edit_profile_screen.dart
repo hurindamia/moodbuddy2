@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final String initialName;
@@ -26,6 +28,7 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
+  // These are state variables, accessible within this class
   late TextEditingController nameCtrl;
   late TextEditingController emailCtrl;
   late TextEditingController aboutCtrl;
@@ -45,6 +48,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     pickedImagePath = widget.initialImage;
   }
 
+  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  // FIX 2: MOVED _saveProfileChanges INSIDE the _EditProfileScreenState class
+  // It now has access to nameCtrl, emergencyNameCtrl, etc.
+  Future<void> _saveProfileChanges() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // Handle case where user is not logged in (optional: show error)
+      print("User not logged in, cannot save to Firestore.");
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(
+        {
+          'name': nameCtrl.text.trim(),
+          'emergencyName': emergencyNameCtrl.text.trim(),
+          'emergencyPhone': emergencyPhoneCtrl.text.trim(),
+          'profileImage': pickedImagePath,
+        },
+        SetOptions(merge: true),
+      );
+      print("Profile saved successfully to Firestore.");
+    } catch (e) {
+      print("Error saving profile: $e");
+      // Optional: show a snackbar to the user
+    }
+  }
+  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+  // FUNCTION 1: PICKS IMAGE FROM DEVICE GALLERY (No change)
   Future<void> pickFromGallery() async {
     final picker = ImagePicker();
     final XFile? file =
@@ -55,6 +91,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  // FUNCTION 2: ALLOWS USER TO PASTE A URL (No change)
   Future<void> pickFromUrlDialog() async {
     final ctrl = TextEditingController(
         text: pickedImagePath?.startsWith('http') == true
@@ -116,6 +153,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     /// ---- Profile Image ----
                     GestureDetector(
                       onTap: () async {
+                        // Show modal to choose source (Gallery or URL)
                         final choice = await showModalBottomSheet<int>(
                           context: context,
                           builder: (_) => SafeArea(
@@ -124,12 +162,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 ListTile(
                                   leading: const Icon(Icons.photo_library),
                                   title: const Text('Choose from gallery'),
-                                  onTap: () => Navigator.pop(context, 1),
+                                  onTap: () => Navigator.pop(context, 1), // 1 for gallery
                                 ),
                                 ListTile(
                                   leading: const Icon(Icons.link),
                                   title: const Text('Use image URL'),
-                                  onTap: () => Navigator.pop(context, 2),
+                                  onTap: () => Navigator.pop(context, 2), // 2 for URL
                                 ),
                               ],
                             ),
@@ -143,17 +181,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         child: CircleAvatar(
                           radius: 60,
                           backgroundColor: Colors.grey.shade200,
+                          // Image display logic: File if local path, NetworkImage if URL, AssetImage if null
                           backgroundImage: pickedImagePath != null
                               ? (pickedImagePath!.startsWith('http')
                               ? NetworkImage(pickedImagePath!)
                               : FileImage(File(pickedImagePath!))) as ImageProvider
                               : const AssetImage('assets/images/profile.png'),
-                          child: Align(
+                          child: const Align(
                             alignment: Alignment.bottomRight,
                             child: CircleAvatar(
                               radius: 18,
-                              backgroundColor: const Color(0xFF9575CD),
-                              child: const Icon(Icons.edit, color: Colors.white, size: 18),
+                              backgroundColor: Color(0xFF9575CD),
+                              child: Icon(Icons.edit, color: Colors.white, size: 18),
                             ),
                           ),
                         ),
@@ -172,6 +211,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     _buildInput("Emergency contact name", emergencyNameCtrl),
                     const SizedBox(height: 15),
 
+                    // ------------------------------------------------------------------
+
+                    const SizedBox(height: 25),
+
                     _buildInput("Emergency contact phone", emergencyPhoneCtrl),
                     const SizedBox(height: 30),
 
@@ -179,15 +222,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                     /// ---- Save Button ----
                     ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context, {
-                          'name': nameCtrl.text.trim(),
-                          'email': emailCtrl.text.trim(),
-                          'about': aboutCtrl.text.trim(),
-                          'emergencyName': emergencyNameCtrl.text.trim(),
-                          'emergencyPhone': emergencyPhoneCtrl.text.trim(),
-                          'image': pickedImagePath,
-                        });
+                      onPressed: () async {
+                        await _saveProfileChanges(); // Now this runs correctly
+
+                        // Pass back the updated data to the ProfileScreen
+                        if (mounted) {
+                          Navigator.pop(context, {
+                            // These variables are now correctly scoped
+                            'name': nameCtrl.text.trim(),
+                            'email': emailCtrl.text.trim(),
+                            'about': aboutCtrl.text.trim(),
+                            'emergencyName': emergencyNameCtrl.text.trim(),
+                            'emergencyPhone': emergencyPhoneCtrl.text.trim(),
+                            'image': pickedImagePath,
+                          });
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF9575CD),
@@ -217,6 +266,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   /// Helper Input Builder
+  /// Helper Input Builder (No change)
+  // ignore: unused_element
   Widget _buildInput(String label, TextEditingController controller,
       {int maxLines = 1}) {
     return TextField(
