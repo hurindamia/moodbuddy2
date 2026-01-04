@@ -32,8 +32,7 @@ class MoodEntry {
       shortcuts: data.containsKey('shortcuts')
           ? (data['shortcuts'] as Map<String, dynamic>).map(
             (k, v) => MapEntry(k, List<String>.from(v)),
-      )
-          : {},
+      ) : {},
     );
   }
 }
@@ -54,10 +53,30 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
   final double _sleepGoal = 8.0;
   final double _stressThreshold = 4.0;
 
+  List<String> unlockedBadges = [];
+  bool _isLoadingBadges = true;
+
+  Future<void> _loadUnlockedBadges() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final snap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('achievements')
+        .get();
+
+    setState(() {
+      unlockedBadges = snap.docs.map((d) => d.id).toList();
+      _isLoadingBadges = false;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _loadMoodEntries();
+    _loadUnlockedBadges();
   }
 
   Future<void> _loadMoodEntries() async {
@@ -347,6 +366,9 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_isLoadingBadges) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     final avgMood = _calculateAverage((e) => e.moodScore);
     final avgStress = _calculateAverage((e) => e.stressLevel);
@@ -408,6 +430,22 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
             const SizedBox(height: 12),
             _buildInsightSummaryCard(),
             const SizedBox(height: 40),
+
+            ExpansionTile(
+              title: Text(
+                "Achievements",
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: _buildAchievementsGrid(unlockedBadges),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -486,5 +524,69 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(title, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold)));
+  }
+
+  Widget _buildAchievementsGrid(List<dynamic> unlockedBadges) {
+    final achievements = [
+      {
+        'id': 'first_entry',
+        'icon': Icons.emoji_events,
+        'label': 'First Step',
+      },
+      {
+        'id': 'going_strong',
+        'icon': Icons.menu_book,
+        'label': 'Going Strong',
+      },
+      {
+        'id': 'consistent_creator',
+        'icon': Icons.local_fire_department,
+        'label': 'Consistent',
+      },
+      {
+        'id': 'busy_bee',
+        'icon': Icons.directions_run,
+        'label': 'Busy Bee',
+      },
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: achievements.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemBuilder: (context, index) {
+        final badge = achievements[index];
+        final unlocked = unlockedBadges.contains(badge['id']);
+
+        return Column(
+          children: [
+            Opacity(
+              opacity: unlocked ? 1 : 0.25,
+              child: CircleAvatar(
+                radius: 30,
+                backgroundColor:
+                unlocked ? Colors.purple : Colors.grey.shade800,
+                child: Icon(
+                  badge['icon'] as IconData,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              badge['label'] as String,
+              style: GoogleFonts.poppins(fontSize: 11),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        );
+      },
+    );
   }
 }

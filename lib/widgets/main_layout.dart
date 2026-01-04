@@ -8,7 +8,9 @@ import '../app_theme.dart';
 
 class MainLayout extends StatefulWidget {
   final int initialIndex;
-  const MainLayout({super.key, required this.initialIndex});
+  final double? initialMood;
+
+  const MainLayout({super.key, required this.initialIndex, this.initialMood});
 
   @override
   State<MainLayout> createState() => _MainLayoutState();
@@ -16,20 +18,22 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> {
   late int _currentIndex;
-
-  final List<Widget> _pages = [
-    const HomeScreen(), // index 0
-    const MoodTrackerScreen(), // index 1
-    const ResourceLibraryScreen(), // index 2
-    const ProgressInsightScreen(), // index 3
-    // ignore: prefer_const_constructors
-    HotlineScreen(), // index 4
-  ];
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+
+    _pages = [
+      const HomeScreen(), // index 0
+      MoodTrackerScreen(
+        initialMood: widget.initialMood, // quick emoji mood button
+      ), // index 1
+      const ResourceLibraryScreen(), // index 2
+      const ProgressInsightScreen(), // index 3
+      const HotlineScreen(), // index 4
+    ];
   }
 
   @override

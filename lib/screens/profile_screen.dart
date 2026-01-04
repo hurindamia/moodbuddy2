@@ -7,7 +7,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 // Ensure these files exist in the same directory (lib/screens/)
 import 'edit_profile_screen.dart';
 import 'privacy_policy_screen.dart';
-// ignore: unused_import
 import 'terms_service_screen.dart';
 import 'about_us.dart';
 
@@ -87,7 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Container(color: Colors.white.withOpacity(0.2)),
+              child: Container(color: Colors.white.withValues(alpha:0.2)),
             ),
           ),
 
@@ -152,11 +151,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.all(14),
                     margin: const EdgeInsets.only(bottom: 18),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.85),
+                      color: Colors.white.withValues(alpha:0.85),
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withValues(alpha:0.06),
                           blurRadius: 8,
                           offset: const Offset(0, 6),
                         ),
@@ -170,7 +169,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF9575CD).withOpacity(0.12),
+                                color: const Color(0xFF9575CD).withValues(alpha:0.12),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(Icons.info_outline, color: Color(0xFF9575CD)),
@@ -209,11 +208,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.85),
+                      color: Colors.white.withValues(alpha:0.85),
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
+                            color: Colors.black.withValues(alpha:0.06),
                             blurRadius: 8,
                             offset: const Offset(0, 6))
                       ],
@@ -226,7 +225,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: cardPurple.withOpacity(0.12),
+                                color: cardPurple.withValues(alpha:0.12),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(Icons.policy, color: cardPurple),

@@ -5,12 +5,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter/foundation.dart'; // Required for setEquals
+import '../services/achievement_service.dart';
 import 'notes_screen.dart';
 import 'journal_screen.dart';
 import 'activities_screen.dart';
 
 class MoodTrackerScreen extends StatefulWidget {
-  const MoodTrackerScreen({super.key});
+  final double? initialMood;
+
+  const MoodTrackerScreen({
+    super.key,
+    this.initialMood,
+  });
 
   @override
   State<MoodTrackerScreen> createState() => _MoodTrackerScreenState();
@@ -18,8 +24,9 @@ class MoodTrackerScreen extends StatefulWidget {
 
 class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
   // === STATE VARIABLES ===
+  bool _isLoading = true;
   double _moodScore = 0;
-  double _stressLevel = 1;
+  double _stressLevel = 0;
   int _sleepHour = 0;
   int _sleepMinute = 0;
   bool _initiallyHadEntry = false;
@@ -45,16 +52,24 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
 
   // Tracking for Unsaved Changes
   double _initialMood = 0;
-  double _initialStress = 1;
+  double _initialStress = 0;
   int _initialSleepHour = 0;
   int _initialSleepMinute = 0;
   Map<String, Set<String>> _initialShortcuts = {};
+
+  double? selectedMood;
 
   @override
   void initState() {
     super.initState();
     for (final k in shortcutOptions.keys) {
       _expandedSections[k] = true;
+    }
+    for (final key in shortcutOptions.keys) {
+      selectedShortcuts[key] = <String>{};
+    }
+    if (widget.initialMood != null) {
+      _moodScore = widget.initialMood!;
     }
     _loadShortcutVocabulary();
     _loadAllEntries();
@@ -103,7 +118,7 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
         if (doc.exists) {
           final data = doc.data()!;
           _moodScore = (data['moodScore'] ?? 0).toDouble();
-          _stressLevel = (data['stressLevel'] ?? 1).toDouble();
+          _stressLevel = (data['stressLevel'] ?? 0).toDouble();
           final sleep = (data['sleepHours'] ?? 0).toDouble();
           _sleepHour = sleep.floor();
           _sleepMinute = ((sleep - _sleepHour) * 60).round();
@@ -115,8 +130,8 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
           }
         } else {
           // RESET TO DEFAULTS for empty days
-          _moodScore = 0;
-          _stressLevel = 1;
+          _moodScore = widget.initialMood ?? 0;
+          _stressLevel = 0;
           _sleepHour = 0;
           _sleepMinute = 0;
         }
@@ -134,6 +149,8 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
           for (final e in selectedShortcuts.entries)
             e.key: Set<String>.from(e.value)
         };
+
+        _isLoading = false;
       });
     }
   }
@@ -163,6 +180,21 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
 
     await _loadAllEntries();
     await _loadEntryForDay();
+
+    final newlyUnlocked = await AchievementService.processAchievements(
+      totalEntries: _events.length,
+      stressLevel: _stressLevel,
+      usedShortcuts: selectedShortcuts.values.any((s) => s.isNotEmpty),
+    );
+
+    if (mounted && newlyUnlocked.isNotEmpty) {
+      _showAchievementPopup(
+        _badgeTitle(newlyUnlocked.first),
+        _badgeDescription(newlyUnlocked.first),
+      );
+    }
+
+    _checkAchievementsAfterSave();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -276,7 +308,7 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
   bool get _hasUnsavedChanges {
     if (!_initiallyHadEntry &&
         _moodScore == 0 &&
-        _stressLevel == 1 &&
+        _stressLevel == 0 &&
         _sleepHour == 0 &&
         _sleepMinute == 0 &&
         selectedShortcuts.values.every((s) => s.isEmpty)) {
@@ -296,10 +328,82 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
     return false;
   }
 
+  void _checkAchievementsAfterSave() {
+    // We use the length of _events which we just updated in _loadAllEntries
+    int totalEntries = _events.length;
+
+    if (_events.isEmpty) return;
+
+    // First Entry
+    if (totalEntries == 1) {
+      _showAchievementPopup(
+        "First Step 🌱",
+        "You logged your first mood!",
+      );
+    }
+
+    // Check specific milestones
+    if (totalEntries == 3) {
+      _showAchievementPopup("Going Strong", "You have 3 entries. What a ride!", current: 3, next: 15);
+    } else if (totalEntries == 15) {
+      _showAchievementPopup("Consistent Creator", "15 entries! You're building a great habit.", current: 15, next: 30);
+    }
+  }
+
+  void _showAchievementPopup(String title, String desc, {int current=1, int next=1}) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A), // Dark themed
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.stars, color: Colors.amber, size: 80),
+            const SizedBox(height: 16),
+            Text("Congratulations!",
+                style: GoogleFonts.poppins(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(title,
+                style: GoogleFonts.poppins(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(desc,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14)),
+            const SizedBox(height: 20),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: current / next,
+                backgroundColor: Colors.white10,
+                color: Colors.cyanAccent,
+                minHeight: 10,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text("Next level: $next entries",
+                style: GoogleFonts.poppins(color: Colors.white30, fontSize: 12)),
+            const SizedBox(height: 20),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("AWESOME!", style: GoogleFonts.poppins(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
   // ================= BUILD METHOD =================
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Mood Tracker", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
@@ -502,9 +606,9 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
   Widget _stressSlider() {
     return Slider(
       value: _stressLevel,
-      min: 1,
+      min: 0,
       max: 10,
-      divisions: 9,
+      divisions: 10,
       activeColor: Colors.deepPurpleAccent,
       label: _stressLevel.round().toString(),
       onChanged: (v) => setState(() => _stressLevel = v),
@@ -566,12 +670,18 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
             Wrap(
               spacing: 8,
               children: options.map((opt) {
-                final selected = selectedShortcuts[title]!.contains(opt);
+                final selected = selectedShortcuts[title]?.contains(opt) ?? false;
                 return FilterChip(
                   label: Text(opt),
                   selected: selected,
-                  onSelected: (v) => setState(() => v ? selectedShortcuts[title]!.add(opt) : selectedShortcuts[title]!.remove(opt)),
-                );
+                  onSelected: (v) {
+                    setState(() {
+                      final set = selectedShortcuts[title];
+                      if (set == null) return;
+
+                      v ? set.add(opt) : set.remove(opt);
+                    });
+                  },                );
               }).toList(),
             ),
         ],
@@ -652,5 +762,31 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
     if (m == 4) return Colors.orange;
     if (m == 5) return Colors.red;
     return Colors.grey;
+  }
+
+  String _badgeTitle(String id) {
+    switch (id) {
+      case 'going_strong':
+        return 'Going Strong 💪';
+      case 'consistent_creator':
+        return 'Consistent Creator 🔥';
+      case 'self_aware':
+        return 'Self-Aware 🧠';
+      default:
+        return 'Achievement Unlocked';
+    }
+  }
+
+  String _badgeDescription(String id) {
+    switch (id) {
+      case 'going_strong':
+        return 'You logged 3 mood entries!';
+      case 'consistent_creator':
+        return '15 days of reflection — amazing!';
+      case 'self_aware':
+        return 'You noticed stress and tracked triggers.';
+      default:
+        return '';
+    }
   }
 }
