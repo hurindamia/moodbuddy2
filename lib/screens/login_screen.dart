@@ -65,7 +65,8 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: "Password", border: OutlineInputBorder())),
               const SizedBox(height: 30),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 94, 53, 129), minimumSize: const Size(double.infinity, 50)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(
+                    255, 97, 56, 133), minimumSize: const Size(double.infinity, 50)),
                 onPressed: _login,
                 child: const Text("Login", style: TextStyle(color: Colors.white, fontSize: 18)),
               ),

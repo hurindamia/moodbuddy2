@@ -430,7 +430,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Hotline & Self-Check'),
-        backgroundColor: AppTheme.primary,
+          backgroundColor: const Color(0xFF9575CD)
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),

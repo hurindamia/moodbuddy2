@@ -1,73 +1,68 @@
 import 'dart:ui';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'edit_profile_screen.dart';
+import 'privacy_policy_screen.dart';
+// ignore: unused_import
 import 'package:firebase_auth/firebase_auth.dart';
 
 // Ensure these files exist in the same directory (lib/screens/)
-import 'edit_profile_screen.dart';
-import 'privacy_policy_screen.dart';
 import 'terms_service_screen.dart';
 import 'about_us.dart';
 
 class ProfileScreen extends StatefulWidget {
-  // CORRECTED CONSTRUCTOR: Accepts required initial parameters
-  final String initialName;
-  final String initialEmail;
-  final String initialEmergencyName;
-  final String initialEmergencyPhone;
-  final String? initialImage; // <--- FIX 1: ADD THIS FIELD
-
-  const ProfileScreen({
-    super.key,
-    required this.initialName,
-    required this.initialEmail,
-    required this.initialEmergencyName,
-    required this.initialEmergencyPhone,
-    this.initialImage, // This is now referencing the field above
-  });
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // State variables initialized in initState()
-  late String name;
-  late String email;
-  late String emergencyName;
-  late String emergencyPhone;
-  String aboutMe = "I love building helpful apps and learning UX."; // Placeholder
-  String? profileImage;
+  // user data (in-memory)
+  late String name = '';
+  late String email = '';
+  late String aboutMe = '';
+  late String emergencyName = '';
+  late String emergencyPhone = '';
+  String? profileImage; // can be local path or URL; if null use asset
   bool acceptedPrivacy = false;
   bool acceptedTerms = false;
 
   @override
   void initState() {
     super.initState();
-    name = widget.initialName;
-    email = widget.initialEmail;
-    emergencyName = widget.initialEmergencyName;
-    emergencyPhone = widget.initialEmergencyPhone;
-    profileImage = widget.initialImage; // <--- FIX 2: This now works because it references the field added above
+    _loadProfile();
   }
 
-  // Logout Function
-  Future<void> _logout() async {
-    // 1. Sign out the user from Firebase
-    await FirebaseAuth.instance.signOut();
+  Future<void> _loadProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-    // 2. Navigate back to the login/initial screen and clear the navigation stack
-    if (mounted) {
-      // Assuming your main login screen is registered under the route '/login'
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    }
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    if (!mounted) return;
+
+    setState(() {
+      name = doc.data()?['name'] ?? 'User';
+      email = doc.data()?['email'] ?? user.email ?? '';
+      emergencyName = doc.data()?['emergencyName'] ?? '';
+      emergencyPhone = doc.data()?['emergencyPhone'] ?? '';
+      profileImage = doc.data()?['profileImage'];
+      aboutMe = doc.data()?['aboutMe'] ?? '';
+    });
   }
+
 
   @override
   Widget build(BuildContext context) {
     const cardPurple = Color(0xFF9575CD);
 
+    VoidCallback? _logout;
     return Scaffold(
       appBar: AppBar(
         title: Text('My Profile', style: GoogleFonts.poppins()),
@@ -80,13 +75,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Image.network(
               'https://i.pinimg.com/736x/7a/17/ac/7a17ac6c1baac75e8a95acfe9badd831.jpg',
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey[200]), // Fallback
+              errorBuilder: (context, error, stackTrace) =>
+                  Container(color: Colors.grey[200]), // Fallback
             ),
           ),
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Container(color: Colors.white.withValues(alpha:0.2)),
+              child: Container(color: Colors.white.withOpacity(0.2)),
             ),
           ),
 
@@ -96,6 +92,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Title
+                  Center(
+                    child: Text(
+                      'Profile',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 18),
 
                   // Header: avatar, name, email
@@ -107,15 +114,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           backgroundColor: Colors.grey.shade200,
                           backgroundImage: profileImage != null
                               ? (profileImage!.startsWith('http')
-                              ? NetworkImage(profileImage!) as ImageProvider
-                              : FileImage(File(profileImage!)) as ImageProvider)
-                              : const AssetImage('assets/images/profile.png') as ImageProvider<Object>?,
+                                  ? NetworkImage(profileImage!) as ImageProvider
+                                  : FileImage(File(profileImage!))
+                                      as ImageProvider)
+                              : const AssetImage('assets/images/profile.png'),
                         ),
                         const SizedBox(height: 12),
-                        Text(name, // DYNAMIC NAME
+                        Text(name,
                             style: GoogleFonts.poppins(
                                 fontSize: 20, fontWeight: FontWeight.w600)),
-                        Text(email, // DYNAMIC EMAIL
+                        Text(email,
                             style: GoogleFonts.poppins(
                                 fontSize: 13, color: Colors.grey.shade800)),
                       ],
@@ -123,6 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
 
                   const SizedBox(height: 20),
+
                   const SizedBox(height: 18),
 
                   // Personal Information
@@ -130,6 +139,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: GoogleFonts.poppins(
                           fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 10),
+                  _infoTile('Full Name', name),
+                  _infoTile('Email', email),
                   _infoTile('Full Name', name), // DYNAMIC
                   _infoTile('Email', email), // DYNAMIC
 
@@ -140,8 +151,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: GoogleFonts.poppins(
                           fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 10),
-                  _infoTile('Name', emergencyName.isEmpty ? 'Not Set' : emergencyName),
-                  _infoTile('Phone', emergencyPhone.isEmpty ? 'Not Set' : emergencyPhone),
+                  _infoTile('Name', emergencyName),
+                  _infoTile('Phone', emergencyPhone),
+
+                  const SizedBox(height: 22),
+
+                  // ABOUT US BOX (same style as Privacy Policy)
+                  _infoTile('Name',
+                      emergencyName.isEmpty ? 'Not Set' : emergencyName),
+                  _infoTile('Phone',
+                      emergencyPhone.isEmpty ? 'Not Set' : emergencyPhone),
 
                   const SizedBox(height: 22),
 
@@ -151,11 +170,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.all(14),
                     margin: const EdgeInsets.only(bottom: 18),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha:0.85),
+                      color: Colors.white.withOpacity(0.85),
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha:0.06),
+                          color: Colors.black.withOpacity(0.06),
                           blurRadius: 8,
                           offset: const Offset(0, 6),
                         ),
@@ -169,10 +188,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF9575CD).withValues(alpha:0.12),
+                                color:
+                                    const Color(0xFF9575CD).withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(Icons.info_outline, color: Color(0xFF9575CD)),
+                              child: const Icon(Icons.info_outline,
+                                  color: Color(0xFF9575CD)),
                             ),
                             const SizedBox(width: 12),
                             Text(
@@ -189,13 +210,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         // Clickable ListTile
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.arrow_right, color: Colors.black54),
-                          title: Text('View details', style: GoogleFonts.poppins()),
+                          leading: const Icon(Icons.arrow_right,
+                              color: Colors.black54),
+                          title: Text('View details',
+                              style: GoogleFonts.poppins()),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const AboutUsScreen()),
+                              MaterialPageRoute(
+                                  builder: (_) => const AboutUsScreen()),
                             );
                           },
                         ),
@@ -208,11 +232,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha:0.85),
+                      color: Colors.white.withOpacity(0.85),
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black.withValues(alpha:0.06),
+                            color: Colors.black.withOpacity(0.06),
                             blurRadius: 8,
                             offset: const Offset(0, 6))
                       ],
@@ -225,10 +249,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: cardPurple.withValues(alpha:0.12),
+                                color: cardPurple.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(Icons.policy, color: cardPurple),
+                              child:
+                                  const Icon(Icons.policy, color: cardPurple),
                             ),
                             const SizedBox(width: 12),
                             Text('Policies & Agreements',
@@ -242,10 +267,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(Icons.privacy_tip_outlined,
                               color: Colors.black54),
-                          title: Text('Privacy Policy', style: GoogleFonts.poppins()),
+                          title: Text('Privacy Policy',
+                              style: GoogleFonts.poppins()),
                           subtitle: Text(
                             'View details',
-                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                            style: GoogleFonts.poppins(
+                                fontSize: 12, color: Colors.grey),
                           ),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
@@ -267,18 +294,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         // Terms of Service row
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading:
-                          const Icon(Icons.description_outlined, color: Colors.black54),
-                          title: Text('Terms of Service', style: GoogleFonts.poppins()),
+                          leading: const Icon(Icons.description_outlined,
+                              color: Colors.black54),
+                          title: Text('Terms of Service',
+                              style: GoogleFonts.poppins()),
                           subtitle: Text(
                             'View details',
-                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                            style: GoogleFonts.poppins(
+                                fontSize: 12, color: Colors.grey),
                           ),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const PrivacyPolicyScreen()),
+                            );
                             final result = await Navigator.push<bool?>(
                               context,
-                              MaterialPageRoute(builder: (_) => const TermsServiceScreen()),
+                              MaterialPageRoute(
+                                  builder: (_) => const TermsServiceScreen()),
                             );
 
                             if (result == true) {
@@ -298,7 +333,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ElevatedButton(
                     onPressed: () async {
                       // Navigate to EditProfileScreen and await result
-                      final updated = await Navigator.push<Map<String, dynamic>?>(
+                      final updated =
+                          await Navigator.push<Map<String, dynamic>?>(
                         context,
                         MaterialPageRoute(
                           builder: (_) => EditProfileScreen(
@@ -318,8 +354,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           name = updated['name'] ?? name;
                           email = updated['email'] ?? email;
                           aboutMe = updated['about'] ?? aboutMe;
-                          emergencyName = updated['emergencyName'] ?? emergencyName;
-                          emergencyPhone = updated['emergencyPhone'] ?? emergencyPhone;
+                          emergencyName =
+                              updated['emergencyName'] ?? emergencyName;
+                          emergencyPhone =
+                              updated['emergencyPhone'] ?? emergencyPhone;
                           profileImage = updated['image'] ?? profileImage;
                         });
                       }
@@ -331,22 +369,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text('Edit Profile',
-                        style: GoogleFonts.poppins(fontSize: 16, color: Colors.white)),
+                        style: GoogleFonts.poppins(
+                            fontSize: 16, color: Colors.white)),
                   ),
 
                   const SizedBox(height: 15),
 
                   // LOGOUT BUTTON (Correctly placed inside the Column)
                   ElevatedButton(
-                    onPressed: _logout, // Calls the Firebase sign-out and navigation function
+                    onPressed:
+                        _logout, // Calls the Firebase sign-out and navigation function
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade400, // Clear indicator for Logout
+                      backgroundColor:
+                          Colors.red.shade400, // Clear indicator for Logout
                       minimumSize: const Size(double.infinity, 50),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text('Logout',
-                        style: GoogleFonts.poppins(fontSize: 16, color: Colors.white)),
+                        style: GoogleFonts.poppins(
+                            fontSize: 16, color: Colors.white)),
                   ),
 
                   const SizedBox(height: 30),

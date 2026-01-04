@@ -55,10 +55,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       // Handle case where user is not logged in (optional: show error)
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User not logged in")),
-      );
+      print("User not logged in, cannot save to Firestore.");
       return;
     }
 
@@ -75,12 +72,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         },
         SetOptions(merge: true),
       );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile saved successfully to Firestore.")),
-      );
+      print("Profile saved successfully to Firestore.");
     } catch (e) {
-      debugPrint("Error saving profile: $e");
+      print("Error saving profile: $e");
       // Optional: show a snackbar to the user
     }
   }
@@ -156,8 +150,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
 
-                    /// ---- Profile Image Selector (Omitted for brevity) ----
-                    // ... (GestureDetector, CircleAvatar logic is correct)
+                    /// ---- Profile Image ----
                     GestureDetector(
                       onTap: () async {
                         // Show modal to choose source (Gallery or URL)
@@ -218,6 +211,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     _buildInput("Emergency contact name", emergencyNameCtrl),
                     const SizedBox(height: 15),
 
+                    // ------------------------------------------------------------------
+
+                    const SizedBox(height: 25),
+
                     _buildInput("Emergency contact phone", emergencyPhoneCtrl),
                     const SizedBox(height: 30),
 
@@ -226,10 +223,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     /// ---- Save Button ----
                     ElevatedButton(
                       onPressed: () async {
-                        await _saveProfileChanges(); // Save changes
+                        await _saveProfileChanges(); // Now this runs correctly
 
-                        // Call a method to handle navigation
-                        _handleNavigation();
+                        // Pass back the updated data to the ProfileScreen
+                        if (mounted) {
+                          Navigator.pop(context, {
+                            // These variables are now correctly scoped
+                            'name': nameCtrl.text.trim(),
+                            'email': emailCtrl.text.trim(),
+                            'about': aboutCtrl.text.trim(),
+                            'emergencyName': emergencyNameCtrl.text.trim(),
+                            'emergencyPhone': emergencyPhoneCtrl.text.trim(),
+                            'image': pickedImagePath,
+                          });
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF9575CD),
@@ -258,7 +265,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  /// Helper Input Builder
   /// Helper Input Builder (No change)
+  // ignore: unused_element
   Widget _buildInput(String label, TextEditingController controller,
       {int maxLines = 1}) {
     return TextField(
@@ -271,18 +280,5 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       ),
     );
-  }
-
-  void _handleNavigation() {
-    if (!mounted) return; // Check if still mounted
-
-    Navigator.pop(context, {
-      'name': nameCtrl.text.trim(),
-      'email': emailCtrl.text.trim(),
-      'about': aboutCtrl.text.trim(),
-      'emergencyName': emergencyNameCtrl.text.trim(),
-      'emergencyPhone': emergencyPhoneCtrl.text.trim(),
-      'image': pickedImagePath,
-    });
   }
 }
