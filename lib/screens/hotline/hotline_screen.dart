@@ -122,7 +122,7 @@ class _HotlineScreenState extends State<HotlineScreen> {
           address:
               '1-1-9, Imperial Grande, Persiaran Relau, Kampung Darat, 11900 Bayan Lepas, Pulau Pinang',
           phone: '+60 18-205 2528',
-          locationQuery: 'Mintygreen Bayan lepas',
+          locationQuery: 'Mintygreen Bayan Lepas',
           imagePath: 'assets/images/mintygreen.jpg',
         ),
         const ClinicCard(
