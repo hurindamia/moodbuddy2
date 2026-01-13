@@ -57,7 +57,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // Handle case where user is not logged in (optional: show error)
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User not logged in")),
+        const SnackBar(content: Text("User not logged in, cannot save to Firestore.")),
       );
       return;
     }
@@ -156,8 +156,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
 
-                    /// ---- Profile Image Selector (Omitted for brevity) ----
-                    // ... (GestureDetector, CircleAvatar logic is correct)
+                    /// ---- Profile Image ----
                     GestureDetector(
                       onTap: () async {
                         // Show modal to choose source (Gallery or URL)
@@ -198,8 +197,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             alignment: Alignment.bottomRight,
                             child: CircleAvatar(
                               radius: 18,
-                              backgroundColor: const Color(0xFF9575CD),
-                              child: const Icon(Icons.edit, color: Colors.white, size: 18),
+                              backgroundColor: Color(0xFF9575CD),
+                              child: Icon(Icons.edit, color: Colors.white, size: 18),
                             ),
                           ),
                         ),
@@ -211,10 +210,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     /// ---- Input Fields ----
                     _buildInput("Full name / Nickname", nameCtrl),
                     const SizedBox(height: 15),
+
                     _buildInput("Email", emailCtrl),
                     const SizedBox(height: 15),
+
                     _buildInput("Emergency contact name", emergencyNameCtrl),
                     const SizedBox(height: 15),
+
                     _buildInput("Emergency contact phone", emergencyPhoneCtrl),
                     const SizedBox(height: 30),
 

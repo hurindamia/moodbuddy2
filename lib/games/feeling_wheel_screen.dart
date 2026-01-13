@@ -1,9 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
-import '../services/activity_service.dart';
 
 class DraggableItem {
   String content;
@@ -31,44 +28,6 @@ class _FeelingWheelScreenState extends State<FeelingWheelScreen> {
     Colors.yellow[200]!, Colors.orange[200]!, Colors.purple[200]!, Colors.pink[100]!
   ];
 
-  Future<void> _generatePdf() async {
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text("My Feeling Wheel Summary", style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 20),
-            pw.Text("Reflections:"),
-            pw.Bullet(text: "Draw where you felt that fear in your body."),
-            pw.Bullet(text: "What color matches how you felt?"),
-            pw.Bullet(text: "What was happening, and where were you?"),
-            pw.SizedBox(height: 20),
-            pw.Text("Recorded Feelings:", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-            ..._items.map((item) => pw.Text("- ${item.content}")),
-          ],
-        ),
-      ),
-    );
-    await Printing.layoutPdf(onLayout: (format) => pdf.save());
-  }
-
-  Future<void> _saveFeelingWheel() async {
-    final feelings = _items.map((e) => e.content).toList();
-
-    await ActivityService.saveActivity(
-      date: DateTime.now(), // or pass from previous screen
-      activityData: {
-        'feeling_wheel': {
-          'feelings': feelings,
-          'colors': _segmentColors.map((c) => c.toARGB32).toList(),
-          'timestamp': DateTime.now(),
-        }
-      },
-    );
-  }
-
   void _handleCircleTap(Offset localPosition, double size) {
     final center = Offset(size / 2, size / 2);
     final dx = localPosition.dx - center.dx;
@@ -91,14 +50,10 @@ class _FeelingWheelScreenState extends State<FeelingWheelScreen> {
         title: Text("Feeling Wheel", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        automaticallyImplyLeading: true,
         actions: [
-          IconButton(icon: const Icon(Icons.picture_as_pdf, color: Color(0xFF9575CD)), onPressed: _generatePdf),
           TextButton(
-            onPressed: () async {
-              await _saveFeelingWheel();
-              if (!context.mounted) return;
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             child: Text("Done", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: const Color(0xFF9575CD))),
           ),
         ],
@@ -194,7 +149,7 @@ class _FeelingWheelScreenState extends State<FeelingWheelScreen> {
             height: 50,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              children: ["😊", "😔", "😠", "😰", "😴", "🥳", "✨", "❤️", "🫂", "🌊"].map((e) => GestureDetector(
+              children: ["😊", "😔", "😠", "😰", "😴", "🥳", "😢", "😵‍💫", "☀️",  "🍿",  "🍕",  "🍞",  "🍦", "✨", "❤️", "🫂", "🌊"].map((e) => GestureDetector(
                 onTap: () => setState(() => _items.add(DraggableItem(content: e, position: const Offset(150, 150)))),
                 child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), child: Text(e, style: const TextStyle(fontSize: 30))),
               )).toList(),

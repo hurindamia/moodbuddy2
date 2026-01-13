@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../widgets/main_layout.dart';
 import 'profile_screen.dart';
 import 'mood_quick_button.dart';
@@ -32,8 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool loading = true;
 
-  List<dynamic> unlockedBadges = [];
-
   final Map<String, int> badgeTargets = {
     '3_day_streak': 3,
     '7_day_streak': 7,
@@ -47,39 +45,23 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadMoodStats();
   }
 
-  // ================= USER DATA =================
+  // ================= DATA LOADING =================
   Future<void> _loadUserData() async {
-    if (user == null) {
+    if (user == null) return;
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+    if (mounted && doc.exists) {
       setState(() {
-        username = 'Guest';
-        userEmail = 'Not Logged In';
+        userEmail = user!.email ?? 'No Email';
+        username = doc.data()?['name'] ?? 'User';
+        emergencyName = doc.data()?['emergencyName'] ?? '';
+        emergencyPhone = doc.data()?['emergencyPhone'] ?? '';
+        profileImageURL = doc.data()?['profileImage'];
       });
-      return;
     }
-
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user!.uid)
-        .get();
-
-    setState(() {
-      userEmail = user!.email ?? 'No Email';
-
-      if (doc.exists && doc.data() != null) {
-        final data = doc.data()!;
-        username = data['name'] ?? 'User';
-        emergencyName = data['emergencyName'] ?? '';
-        emergencyPhone = data['emergencyPhone'] ?? '';
-        profileImageURL = data['profileImage'];
-        unlockedBadges = data['unlocked_badges'] ?? [];
-      }
-    });
   }
 
-  // ================= MOOD STATS =================
   Future<void> _loadMoodStats() async {
     if (user == null) return;
-
     final snap = await FirebaseFirestore.instance
         .collection('users')
         .doc(user!.uid)
@@ -89,12 +71,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     int streak = 0;
     DateTime? lastDate;
-
-    // --- WEEKLY ---
     final now = DateTime.now();
-    final startOfWeek =
-    DateTime(now.year, now.month, now.day - (now.weekday - 1)); // Monday
-
+    final startOfWeek = DateTime(now.year, now.month, now.day - (now.weekday - 1));
     final Set<String> weeklyDays = {};
     final Set<String> journalDays = {};
 
@@ -103,41 +81,34 @@ class _HomeScreenState extends State<HomeScreen> {
       final date = (data['date'] as Timestamp).toDate();
       final dayKey = "${date.year}-${date.month}-${date.day}";
 
-      // ===== STREAK =====
-      if (lastDate == null ||
-          lastDate.difference(DateTime(date.year, date.month, date.day)).inDays == 1) {
+      // Streak Logic
+      if (lastDate == null || lastDate.difference(DateTime(date.year, date.month, date.day)).inDays == 1) {
         streak++;
         lastDate = DateTime(date.year, date.month, date.day);
-      } else {
+      } else if (lastDate.difference(DateTime(date.year, date.month, date.day)).inDays > 1) {
         break;
       }
 
-
-      // ===== WEEKLY CHECK =====
+      // Weekly Progress & Sentiment
       if (date.isAfter(startOfWeek.subtract(const Duration(seconds: 1)))) {
         weeklyDays.add(dayKey);
-
-        // ===== JOURNAL CHECK =====
-        final hasShortcuts =
-            data['shortcuts'] != null && (data['shortcuts'] as Map).isNotEmpty;
-        final hasNotes =
-            data['notes'] != null && data['notes'].toString().trim().isNotEmpty;
-
-        if (hasShortcuts || hasNotes) {
+        if ((data['shortcuts'] != null && (data['shortcuts'] as Map).isNotEmpty) ||
+            (data['notes'] != null && data['notes'].toString().trim().isNotEmpty)) {
           journalDays.add(dayKey);
         }
       }
     }
 
-    setState(() {
-      moodStreak = streak;
-      journalCount = journalDays.length;
-      progressPercentage = weeklyDays.length / 7;
-      loading = false;
-    });
+    if (mounted) {
+      setState(() {
+        moodStreak = streak;
+        journalCount = journalDays.length;
+        progressPercentage = weeklyDays.length / 7;
+        loading = false;
+      });
+    }
   }
 
-  // ================= PROFILE NAV =================
   void _goToProfile() {
     Navigator.push(
       context,
@@ -153,20 +124,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ================= FEATURED TITLES =================
   List<String> _featuredTitles(String sentiment) {
-    if (sentiment == "NEGATIVE") {
-      return ["Low Mood – Tips and Self-Help", "Stress Management Basics"];
-    }
-    if (sentiment == "POSITIVE") {
-      return ["Gratitude Journaling", "Building Positive Habits"];
-    }
+    if (sentiment == "NEGATIVE") return ["Low Mood – Tips and Self-Help", "Stress Management Basics"];
+    if (sentiment == "POSITIVE") return ["Gratitude Journaling", "Building Positive Habits"];
     return ["Daily Self Check-In", "Mindful Breathing"];
   }
 
-  // ================= STREAK UI =================
-
-  // Suggestion for a better Badge Widget
+  // ================= UI COMPONENTS =================
   Widget _buildBadge(String label, IconData icon, bool achieved, int current, int target) {
     return Column(
       children: [
@@ -184,245 +148,176 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 4),
         Text(label, style: GoogleFonts.poppins(fontSize: 10, color: Colors.white)),
-        // Tiny progress bar under the badge
         if (!achieved)
           Container(
             width: 40, height: 4,
             margin: const EdgeInsets.only(top: 4),
-            child: LinearProgressIndicator(value: current / target, color: Colors.purpleAccent),
+            child: LinearProgressIndicator(value: (current / target).clamp(0.0, 1.0), color: Colors.purpleAccent),
           )
       ],
     );
   }
 
-  void _showAchievementDialog(String title, String desc, int current, int nextLevel) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircleAvatar(radius: 40, backgroundColor: Colors.purple, child: Icon(Icons.star, size: 40)),
-            const SizedBox(height: 20),
-            const Text("Congratulations!", style: TextStyle(color: Colors.white70)),
-            Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 10),
-            Text(desc, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
-            const SizedBox(height: 20),
-            LinearProgressIndicator(value: current / nextLevel, color: Colors.purpleAccent),
-            const SizedBox(height: 10),
-            Text("Next level: $nextLevel", style: const TextStyle(color: Colors.white30)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ================= UI =================
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    final featuredTitles = _featuredTitles(sentiment);
+    if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/background1.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Container(
-          color: Colors.black26,
-          padding: const EdgeInsets.all(20),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-
-                // ===== HEADER =====
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Stack(
+        children: [
+          // Background
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/background1.png'), // Using background1 from your first code
+                fit: BoxFit.cover,
+                opacity: 0.8,
+              ),
+            ),
+            child: Container(
+              color: Colors.black26,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 36),
+
+                    // ================= LOGO (CENTERED) =================
+                    Center(
+                      child: Image.asset(
+                        'assets/images/moodbuddy_logo3.png',
+                        height: 100,
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ================= GREETING (CENTERED) =================
+                    Center(
+                      child: Column(
+                        children: [
+                          Text(
+                            'Hi, ${username.isEmpty ? 'User' : username} 👋',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'Twcent',
+                              fontSize: 34,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                              color: Color(0xFF432560),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Welcome back — take a moment for yourself',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Twcent',
+                              fontSize: 15,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Quote Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Quote of the day', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: const Color(0xFF9575CD))),
+                          const SizedBox(height: 8),
+                          Text('"The best time to take care of your mind is now."', style: GoogleFonts.poppins(fontSize: 16)),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Text('- MoodBuddy', style: GoogleFonts.poppins(color: Colors.black54, fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Badges Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          'Hi, $username',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Welcome back — take a moment for yourself',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
-                        ),
+                        _buildBadge("3 Days", Icons.local_fire_department, moodStreak >= 3, moodStreak, 3),
+                        const SizedBox(width: 20),
+                        _buildBadge("7 Days", Icons.whatshot, moodStreak >= 7, moodStreak, 7),
+                        const SizedBox(width: 20),
+                        _buildBadge("Journal", Icons.menu_book, journalCount >= 5, journalCount, 5),
                       ],
                     ),
-                    GestureDetector(
-                      onTap: _goToProfile,
-                      child: const CircleAvatar(
-                        backgroundColor: Colors.white,
-                        child: Icon(Icons.person, color: AppTheme.primary),
-                      ),
+
+                    const SizedBox(height: 24),
+
+                    // Mood Selection Buttons
+                    MoodQuickButtons(
+                      onMoodSelected: (moodScore) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => MainLayout(initialIndex: 1, initialMood: moodScore)),
+                        );
+                      },
                     ),
+
+                    const SizedBox(height: 24),
+
+                    // Progress Summary
+                    ProgressSummaryCard(
+                      moodStreak: moodStreak,
+                      journals: journalCount,
+                      progressPercentage: progressPercentage,
+                    ),
+
+                    const SizedBox(height: 26),
+
+                    Text(
+                      'Featured Resources',
+                      style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    const SizedBox(height: 12),
+                    ..._featuredTitles(sentiment).map((title) => FeaturedResourceCard(
+                      title: title,
+                      onTap: () => Navigator.pushNamed(context, '/resources'),
+                    )),
                   ],
                 ),
-
-                const SizedBox(height: 18),
-
-                // ===== QUOTE =====
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha:0.9),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Quote of the day',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '"The best time to take care of your mind is now."',
-                        style: GoogleFonts.poppins(fontSize: 16),
-                      ),
-                      const SizedBox(height: 6),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          '- MoodBuddy',
-                          style: GoogleFonts.poppins(
-                            color: Colors.black54,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => _showAchievementDialog(
-                        "3-Day Streak",
-                        "Maintain a 3-day mood streak",
-                        moodStreak,
-                        badgeTargets['3_day_streak']!,
-                      ),
-                      child: _buildBadge(
-                        "3 Days",
-                        Icons.local_fire_department,
-                        moodStreak >= badgeTargets['3_day_streak']!,
-                        moodStreak,
-                        badgeTargets['3_day_streak']!,
-                      ),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    GestureDetector(
-                      onTap: () => _showAchievementDialog(
-                        "7-Day Streak",
-                        "Maintain a 7-day mood streak",
-                        moodStreak,
-                        badgeTargets['7_day_streak']!,
-                      ),
-                      child: _buildBadge(
-                        "7 Days",
-                        Icons.whatshot,
-                        moodStreak >= badgeTargets['7_day_streak']!,
-                        moodStreak,
-                        badgeTargets['7_day_streak']!,
-                      ),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    GestureDetector(
-                      onTap: () => _showAchievementDialog(
-                        "Journal Master",
-                        "Write reflections on 5 different days",
-                        journalCount,
-                        badgeTargets['journal_5_days']!,
-                      ),
-                      child: _buildBadge(
-                        "Journal",
-                        Icons.menu_book,
-                        journalCount >= badgeTargets['journal_5_days']!,
-                        journalCount,
-                        badgeTargets['journal_5_days']!,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-                MoodQuickButtons(
-                  onMoodSelected: (moodScore) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => MainLayout(
-                            initialIndex: 1,        // switch to MoodTracker tab
-                            initialMood: moodScore // pass emoji
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 24),
-                ProgressSummaryCard(
-                  moodStreak: moodStreak,
-                  journals: journalCount,
-                  progressPercentage: progressPercentage,
-                ),
-
-                const SizedBox(height: 26),
-                Text(
-                  'Featured Resources',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-                ...featuredTitles.map(
-                      (title) => FeaturedResourceCard(
-                    title: title,
-                    onTap: () =>
-                        Navigator.pushNamed(context, '/resources'),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+
+          // ================= PROFILE BUTTON (TOP RIGHT) =================
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 16,
+            child: GestureDetector(
+              onTap: _goToProfile,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4))],
+                ),
+                child: const Icon(Icons.account_circle, size: 42, color: Color(0xFF432560)),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

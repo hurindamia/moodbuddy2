@@ -60,34 +60,43 @@ class _ResourceLibraryScreenState extends State<ResourceLibraryScreen>
           ],
         ),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        // Listen to the latest mood entry
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('mood_entries')
-            .orderBy('last_updated', descending: true)
-            .limit(1)
-            .snapshots(),
-        builder: (context, snapshot) {
-          String sentiment = "NEUTRAL";
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/background1.png'),
+            fit: BoxFit.cover,
+            opacity: 0.8,
+          ),
+        ),
+        child: StreamBuilder<QuerySnapshot>(
+          // Listen to the latest mood entry
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('mood_entries')
+              .orderBy('last_updated', descending: true)
+              .limit(1)
+              .snapshots(),
+          builder: (context, snapshot) {
+            String sentiment = "NEUTRAL";
 
-          if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-            sentiment =
-                snapshot.data!.docs.first['last_note_sentiment'] ?? "NEUTRAL";
-          }
+            if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+              sentiment =
+                  snapshot.data!.docs.first['last_note_sentiment'] ?? "NEUTRAL";
+            }
 
-          final resources = _resourcesForSentiment(sentiment);
+            final resources = _resourcesForSentiment(sentiment);
 
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _buildList(resources, "article", sentiment),
-              _buildList(resources, "video", sentiment),
-              _buildList(resources, "book", sentiment),
-            ],
-          );
-        },
+            return TabBarView(
+              controller: _tabController,
+              children: [
+                _buildList(resources, "article", sentiment),
+                _buildList(resources, "video", sentiment),
+                _buildList(resources, "book", sentiment),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

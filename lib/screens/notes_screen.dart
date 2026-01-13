@@ -189,7 +189,7 @@ class _NotesScreenState extends State<NotesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Daily Notes", style: GoogleFonts.poppins()),
-        backgroundColor: const Color(0xFF9575CD),
+        backgroundColor: const Color(0xFFF3E5F5),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),

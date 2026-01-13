@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'breathing_screen.dart';
-import 'meditation_screen.dart';
-import 'feeling_wheel_screen.dart';
+import 'package:moodbuddy2/games/meditation_screen.dart';
+import 'package:moodbuddy2/games/feeling_wheel_screen.dart';
 
 class ActivitiesMenuScreen extends StatelessWidget {
   const ActivitiesMenuScreen({super.key});

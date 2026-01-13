@@ -69,9 +69,9 @@ class ResultHistoryScreen extends StatelessWidget {
                         LineChartData(
                           minY: 0,
                           maxY: 100,
-                          gridData: FlGridData(show: true),
+                          gridData: const FlGridData(show: true),
                           titlesData: FlTitlesData(
-                            leftTitles: AxisTitles(
+                            leftTitles: const AxisTitles(
                               sideTitles: SideTitles(
                                 showTitles: true,
                                 interval: 20,
@@ -97,7 +97,7 @@ class ResultHistoryScreen extends StatelessWidget {
                               spots: spots,
                               isCurved: true,
                               barWidth: 3,
-                              dotData: FlDotData(show: true),
+                              dotData: const FlDotData(show: true),
                             ),
                           ],
                         ),

@@ -410,109 +410,118 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
         centerTitle: true,
         backgroundColor: const Color(0xFF9575CD),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          children: [
-            _jumpControl(),
-            const SizedBox(height: 10),
-            _calendar(),
-            const SizedBox(height: 30),
-            _section("How are you feeling?"),
-            _moodScale(),
-            const SizedBox(height: 30),
-            _section("Stress Level"),
-            Text("Current: ${_stressLevel.round()} / 10", style: const TextStyle(fontSize: 14)),
-            _stressSlider(),
-            const SizedBox(height: 30),
-            _section("Sleep Duration"),
-            _sleepInput(),
-            const SizedBox(height: 30),
-            _section("Shortcut Notes"),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text("Choose options that fill up your day", style: TextStyle(color: Colors.black54)),
-            ),
-            const SizedBox(height: 12),
-            ...shortcutOptions.entries.map((e) => _shortcutSection(e.key, e.value)),
-            const SizedBox(height: 30),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _nextPageButton(Icons.auto_awesome, "Notes", (){
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => NotesScreen(selectedDate: _selectedDay),
-                    ),
-                  );
-                }),
-                _nextPageButton(Icons.book, "Journal", () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => JournalScreen(selectedDate: _selectedDay),
-                    ),
-                  );
-                }),
-
-                _nextPageButton(Icons.videogame_asset, "Activities/Games",(){
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ActivitiesScreen(selectedDate: _selectedDay),
-                    ),
-                  );
-                }),
-              ],
-            ),
-            const SizedBox(height: 30),
-
-            if (_moodScore <= 0)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  "Please select a mood to enable saving",
-                  style: TextStyle(color: Colors.red.shade400, fontSize: 13, fontWeight: FontWeight.w500),
-                ),
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/background1.png'),
+            fit: BoxFit.cover,
+            opacity: 0.8,
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            children: [
+              _jumpControl(),
+              const SizedBox(height: 10),
+              _calendar(),
+              const SizedBox(height: 30),
+              _section("How are you feeling?"),
+              _moodScale(),
+              const SizedBox(height: 30),
+              _section("Stress Level"),
+              Text("Current: ${_stressLevel.round()} / 10", style: const TextStyle(fontSize: 14)),
+              _stressSlider(),
+              const SizedBox(height: 30),
+              _section("Sleep Duration"),
+              _sleepInput(),
+              const SizedBox(height: 30),
+              _section("Shortcut Notes"),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text("Choose options that fill up your day", style: TextStyle(color: Colors.black54)),
               ),
+              const SizedBox(height: 12),
+              ...shortcutOptions.entries.map((e) => _shortcutSection(e.key, e.value)),
+              const SizedBox(height: 30),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _nextPageButton(Icons.auto_awesome, "Notes", (){
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => NotesScreen(selectedDate: _selectedDay),
+                      ),
+                    );
+                  }),
+                  _nextPageButton(Icons.book, "Journal", () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => JournalScreen(selectedDate: _selectedDay),
+                      ),
+                    );
+                  }),
 
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _moodScore == 0 ? null : _saveEntry,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF9575CD),
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey.shade400,
+                  _nextPageButton(Icons.videogame_asset, "Activities/Games",(){
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ActivitiesScreen(selectedDate: _selectedDay),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+              const SizedBox(height: 30),
+
+              if (_moodScore <= 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    "Please select a mood to enable saving",
+                    style: TextStyle(color: Colors.red.shade400, fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
+                ),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _moodScore == 0 ? null : _saveEntry,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF9575CD),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.grey.shade400,
+                      ),
+                      child: const Text("Save Entry"),
                     ),
-                    child: const Text("Save Entry"),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: !_hasEntryForSelectedDay ? null : () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: const Text("Delete Entry"),
-                          content: const Text("Are you sure you want to delete this entry?"),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-                            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Delete")),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) _deleteEntry();
-                    },
-                    child: const Text("Delete Entry"),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: !_hasEntryForSelectedDay ? null : () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text("Delete Entry"),
+                            content: const Text("Are you sure you want to delete this entry?"),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+                              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Delete")),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) _deleteEntry();
+                      },
+                      child: const Text("Delete Entry"),
+                    ),
                   ),
-                ),
-              ],
-            )
-          ],
+                ],
+              )
+            ],
+          ),
         ),
       ),
     );
@@ -521,116 +530,172 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
   // ================= COMPONENTS =================
 
   Widget _calendar() {
-    return Column(
-      children: [
-        TableCalendar(
-          firstDay: DateTime.utc(2022, 1, 1),
-          lastDay: DateTime.now(),
-          focusedDay: _focusedDay,
-          calendarFormat: _calendarFormat,
-          onFormatChanged: (format) => setState(() => _calendarFormat = format),
-          selectedDayPredicate: (d) => isSameDay(d, _selectedDay),
-          eventLoader: (day) => _events[DateTime(day.year, day.month, day.day)] ?? [],
-          onDaySelected: _onDaySelected,
-          calendarStyle: CalendarStyle(
-            todayDecoration: const BoxDecoration(color: Color(0xFFC6B8DC), shape: BoxShape.circle),
-            selectedDecoration: BoxDecoration(
-              color: const Color(0xFF9071C7),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF512DA8), width: 2),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          TableCalendar(
+            firstDay: DateTime.utc(2022, 1, 1),
+            lastDay: DateTime.now(),
+            focusedDay: _focusedDay,
+            calendarFormat: _calendarFormat,
+            onFormatChanged: (format) => setState(() => _calendarFormat = format),
+            selectedDayPredicate: (d) => isSameDay(d, _selectedDay),
+            eventLoader: (day) => _events[DateTime(day.year, day.month, day.day)] ?? [],
+            onDaySelected: _onDaySelected,
+            calendarStyle: CalendarStyle(
+              todayDecoration: const BoxDecoration(color: Color(0xFFC6B8DC), shape: BoxShape.circle),
+              selectedDecoration: BoxDecoration(
+                color: const Color(0xFF9071C7),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFF512DA8), width: 2),
+              ),
+            ),
+            calendarBuilders: CalendarBuilders(
+              markerBuilder: (_, date, events) {
+                if (events.isEmpty) return null;
+                final mood = events.first as double;
+                return Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    margin: const EdgeInsets.only(bottom: 4),
+                    decoration: BoxDecoration(color: _moodColor(mood), shape: BoxShape.circle),
+                  ),
+                );
+              },
             ),
           ),
-          calendarBuilders: CalendarBuilders(
-            markerBuilder: (_, date, events) {
-              if (events.isEmpty) return null;
-              final mood = events.first as double;
-              return Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  margin: const EdgeInsets.only(bottom: 4),
-                  decoration: BoxDecoration(color: _moodColor(mood), shape: BoxShape.circle),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _hasEntryForSelectedDay ? Icons.check_circle : Icons.radio_button_unchecked,
+                  color: _hasEntryForSelectedDay ? Colors.green : Colors.grey,
+                  size: 18,
                 ),
-              );
-            },
+                const SizedBox(width: 6),
+                Text(
+                  _hasEntryForSelectedDay ? "Entry saved for this day" : "No entry for this day",
+                  style: TextStyle(color: _hasEntryForSelectedDay ? Colors.green : Colors.grey, fontSize: 13),
+                ),
+              ],
+            ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                _hasEntryForSelectedDay ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: _hasEntryForSelectedDay ? Colors.green : Colors.grey,
-                size: 18,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                _hasEntryForSelectedDay ? "Entry saved for this day" : "No entry for this day",
-                style: TextStyle(color: _hasEntryForSelectedDay ? Colors.green : Colors.grey, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _moodScale() {
     final emojis = ['😄', '🙂', '😐', '🙁', '😖'];
     final labels = ['Great', 'Good', 'Okay', 'Bad', 'Awful'];
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(5, (i) {
-        final score = (i + 1).toDouble();
-        final selected = _moodScore == score;
-        return GestureDetector(
-          onTap: () => setState(() => _moodScore = score),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: selected ? BoxDecoration(border: Border.all(color: _moodColor(score), width: 3), shape: BoxShape.circle) : null,
-                child: Opacity(opacity: selected ? 1 : 0.4, child: Text(emojis[i], style: const TextStyle(fontSize: 32))),
-              ),
-              Text(labels[i], style: const TextStyle(fontSize: 12))
-            ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        );
-      }),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(5, (i) {
+          final score = (i + 1).toDouble();
+          final selected = _moodScore == score;
+          return GestureDetector(
+            onTap: () => setState(() => _moodScore = score),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: selected ? BoxDecoration(border: Border.all(color: _moodColor(score), width: 3), shape: BoxShape.circle) : null,
+                  child: Opacity(opacity: selected ? 1 : 0.4, child: Text(emojis[i], style: const TextStyle(fontSize: 32))),
+                ),
+                Text(labels[i], style: const TextStyle(fontSize: 12))
+              ],
+            ),
+          );
+        }),
+      ),
     );
   }
 
   Widget _stressSlider() {
-    return Slider(
-      value: _stressLevel,
-      min: 0,
-      max: 10,
-      divisions: 10,
-      activeColor: Colors.deepPurpleAccent,
-      label: _stressLevel.round().toString(),
-      onChanged: (v) => setState(() => _stressLevel = v),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Slider(
+        value: _stressLevel,
+        min: 0,
+        max: 10,
+        divisions: 10,
+        activeColor: Colors.deepPurpleAccent,
+        label: _stressLevel.round().toString(),
+        onChanged: (v) => setState(() => _stressLevel = v),
+      ),
     );
   }
 
   Widget _sleepInput() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        DropdownButton<int>(
-          value: _sleepHour,
-          items: List.generate(24, (i) => DropdownMenuItem(value: i, child: Text("$i hrs"))),
-          onChanged: (v) => setState(() => _sleepHour = v!),
-        ),
-        const SizedBox(width: 15),
-        DropdownButton<int>(
-          value: _sleepMinute,
-          items: [0, 15, 30, 45].map((m) => DropdownMenuItem(value: m, child: Text("$m mins"))).toList(),
-          onChanged: (v) => setState(() => _sleepMinute = v!),
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          DropdownButton<int>(
+            value: _sleepHour,
+            items: List.generate(24, (i) => DropdownMenuItem(value: i, child: Text("$i hrs"))),
+            onChanged: (v) => setState(() => _sleepHour = v!),
+          ),
+          const SizedBox(width: 15),
+          DropdownButton<int>(
+            value: _sleepMinute,
+            items: [0, 15, 30, 45].map((m) => DropdownMenuItem(value: m, child: Text("$m mins"))).toList(),
+            onChanged: (v) => setState(() => _sleepMinute = v!),
+          ),
+        ],
+      ),
     );
   }
 
@@ -639,7 +704,18 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(border: Border.all(color: Colors.deepPurple.shade100), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        border: Border.all(color: Colors.deepPurple.shade100),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         children: [
           Row(
@@ -690,39 +766,53 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
   }
 
   Widget _jumpControl() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text("Jump to:   "),
-        DropdownButton<int>(
-          value: _focusedDay.month,
-          menuMaxHeight: 250,
-          items: List.generate(12, (i) => DropdownMenuItem(value: i + 1, child: Text(DateFormat.MMM().format(DateTime(0, i + 1))))),
-          onChanged: (m) => setState(() => _focusedDay = DateTime(_focusedDay.year, m!, 1)),
-        ),
-        DropdownButton<int>(
-          value: _focusedDay.year,
-          menuMaxHeight: 250,
-          items: List.generate(5, (i) => DropdownMenuItem(value: 2022 + i, child: Text("${2022 + i}"))),
-          onChanged: (y) => setState(() => _focusedDay = DateTime(y!, _focusedDay.month, 1)),
-        ),
-        const SizedBox(width: 8),
-        OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: Color(0xFF512DA8)),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          onPressed: () {
-            setState(() {
-              _focusedDay = DateTime.now();
-              _selectedDay = DateTime.now();
-            });
-            _loadEntryForDay();
-          },
-          child: const Text("Today"),
-        ),
-      ],
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text("Jump to:   "),
+          DropdownButton<int>(
+            value: _focusedDay.month,
+            menuMaxHeight: 250,
+            items: List.generate(12, (i) => DropdownMenuItem(value: i + 1, child: Text(DateFormat.MMM().format(DateTime(0, i + 1))))),
+            onChanged: (m) => setState(() => _focusedDay = DateTime(_focusedDay.year, m!, 1)),
+          ),
+          DropdownButton<int>(
+            value: _focusedDay.year,
+            menuMaxHeight: 250,
+            items: List.generate(5, (i) => DropdownMenuItem(value: 2022 + i, child: Text("${2022 + i}"))),
+            onChanged: (y) => setState(() => _focusedDay = DateTime(y!, _focusedDay.month, 1)),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFF512DA8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              setState(() {
+                _focusedDay = DateTime.now();
+                _selectedDay = DateTime.now();
+              });
+              _loadEntryForDay();
+            },
+            child: const Text("Today"),
+          ),
+        ],
+      ),
     );
   }
 

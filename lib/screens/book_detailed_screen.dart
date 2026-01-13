@@ -55,8 +55,10 @@ class BookDetailScreen extends StatelessWidget {
                 if (await canLaunchUrl(Uri.parse(link))) {
                   launchUrl(Uri.parse(link));
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Cannot open link")));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Cannot open link")));
+                  }
                 }
               },
             )
