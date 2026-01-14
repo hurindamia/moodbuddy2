@@ -65,7 +65,7 @@ class _ResourceLibraryScreenState extends State<ResourceLibraryScreen>
           image: DecorationImage(
             image: AssetImage('assets/images/background1.png'),
             fit: BoxFit.cover,
-            opacity: 0.8,
+            opacity: 0.35,
           ),
         ),
         child: StreamBuilder<QuerySnapshot>(

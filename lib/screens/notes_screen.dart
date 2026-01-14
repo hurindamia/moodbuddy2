@@ -171,9 +171,45 @@ class _NotesScreenState extends State<NotesScreen> {
     return "😐 Neutral";
   }
 
+  void _showDisclaimer() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.warning_amber_outlined, color: Colors.blue, size: 50),
+            const SizedBox(height: 16),
+            Text("Disclaimer",
+                style: GoogleFonts.poppins(
+                    color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 12),
+            Text(
+              "The AI Notes feature is for engagement and reflection purposes only. It is NOT certified for mental health guidance and may not provide accurate advice.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 20),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Understood",
+                  style: GoogleFonts.poppins(color: Colors.blue, fontWeight: FontWeight.bold)),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    // Show disclaimer after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showDisclaimer();
+    });
     _currentDate = widget.selectedDate;
     _loadNotesForDate();
   }
@@ -189,7 +225,7 @@ class _NotesScreenState extends State<NotesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Daily Notes", style: GoogleFonts.poppins()),
-        backgroundColor: const Color(0xFFF3E5F5),
+        backgroundColor: const Color(0xFF9575CD),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -291,8 +327,15 @@ class _NotesScreenState extends State<NotesScreen> {
               child: ElevatedButton(
                 onPressed: _loading ? null : _analyzeAndSave,
                 child: _loading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("Analyze & Save"),
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Text(
+                  "Analyze & Save",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             )
           ],

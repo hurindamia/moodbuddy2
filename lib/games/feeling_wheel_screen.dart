@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/activity_service.dart';
 
 class DraggableItem {
   String content;
@@ -42,6 +45,36 @@ class _FeelingWheelScreenState extends State<FeelingWheelScreen> {
     });
   }
 
+  Future<void> _saveFeelingActivity() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Save feeling wheel activity
+    await ActivityService.saveActivity(
+      date: DateTime.now(),
+      activityData: {
+        'emotion': {
+          'completed': true,
+          'itemsCount': _items.length,
+          'timestamp': FieldValue.serverTimestamp(),
+        }
+      },
+    );
+
+    // Unlock emotion achievement
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('achievements')
+        .doc('feelings_explorer')
+        .set(
+      {
+        'unlockedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,8 +86,25 @@ class _FeelingWheelScreenState extends State<FeelingWheelScreen> {
         automaticallyImplyLeading: true,
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Done", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: const Color(0xFF9575CD))),
+            onPressed: () async {
+              if (_items.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Try adding at least one feeling")),
+                );
+                return;
+              }
+
+              await _saveFeelingActivity();
+              if (!context.mounted) return;
+              Navigator.pop(context);
+            },
+            child: Text(
+              "Done",
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF9575CD),
+              ),
+            ),
           ),
         ],
       ),

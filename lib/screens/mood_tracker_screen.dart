@@ -155,15 +155,63 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
     }
   }
 
+  Future<List<Map<String, String>>> _getStreakAchievements() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return [];
+
+    final entriesSnap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('mood_entries')
+        .orderBy('date', descending: true)
+        .get();
+
+    if (entriesSnap.docs.isEmpty) return [];
+
+    final entryDates = entriesSnap.docs
+        .map((doc) => (doc['date'] as Timestamp).toDate())
+        .toList();
+
+    // Unlock streak badges and get newly unlocked
+    final newlyUnlockedStreaks =
+    await AchievementService.evaluateStreakBadges(entryDates);
+
+    // Convert to popup-friendly format
+    final streakAchievements = newlyUnlockedStreaks.entries.map((entry) {
+      final milestone = entry.value;
+      String encouragement;
+
+      if (milestone == 3) {
+        encouragement = "Awesome! 3 days in a row!";
+      } else if (milestone == 7) {
+        encouragement = "1-week streak! Keep going!";
+      } else if (milestone == 14) {
+        encouragement = "2 weeks streak! You're doing great!";
+      } else if (milestone == 30) {
+        encouragement = "30-day streak! Incredible dedication!";
+      } else {
+        encouragement = "$milestone-day streak! Amazing dedication!";
+      }
+
+      return {
+        'title': 'Streak Milestone!',
+        'desc': encouragement,
+      };
+    }).toList();
+
+    return streakAchievements;
+  }
+
   Future<void> _saveEntry() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     final id = DateFormat('yyyy-MM-dd').format(_selectedDay);
 
-    final bool isNegativeDay =
-        _moodScore >= 4 || _stressLevel >= 7;
+    // Determine if it's a "negative day" for tracking
+    final bool isNegativeDay = _moodScore >= 4 || _stressLevel >= 7;
 
+    // Save mood entry to Firestore
     await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
@@ -178,27 +226,74 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
       'isNegativeDay': isNegativeDay,
     });
 
+    // Reload calendar & day entry
     await _loadAllEntries();
     await _loadEntryForDay();
 
-    final newlyUnlocked = await AchievementService.processAchievements(
-      totalEntries: _events.length,
-      stressLevel: _stressLevel,
-      usedShortcuts: selectedShortcuts.values.any((s) => s.isNotEmpty),
-    );
-
-    if (mounted && newlyUnlocked.isNotEmpty) {
-      _showAchievementPopup(
-        _badgeTitle(newlyUnlocked.first),
-        _badgeDescription(newlyUnlocked.first),
+    // After saving entry, before achievements
+    if (mounted) {
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.emoji_people, color: Colors.blue, size: 60),
+              const SizedBox(height: 16),
+              Text(
+                "Great job!",
+                style: GoogleFonts.poppins(color: Colors.purpleAccent, fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "You just recorded your mood for today. Hope you are doing fine! 🌟",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 20),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text("Thanks!", style: GoogleFonts.poppins(color: Colors.purpleAccent, fontWeight: FontWeight.bold)),
+              )
+            ],
+          ),
+        ),
       );
     }
 
-    _checkAchievementsAfterSave();
+    // --- Get regular achievements ---
+    final newlyUnlocked = await AchievementService.evaluateAndUnlock(
+      moodEntries: _events,
+      stressLevel: _stressLevel,
+      sleepLogged: _sleepHour > 0 || _sleepMinute > 0,
+      usedShortcuts: selectedShortcuts.values.any((s) => s.isNotEmpty),
+    );
 
+    final regularAchievements = newlyUnlocked.map((id) => {
+      'title': _badgeTitle(id),
+      'desc': _badgeDescription(id),
+    }).toList();
+
+    // --- Get streak achievements ---
+    final streakAchievements = await _getStreakAchievements();
+
+    // --- Combine all achievements into one queue ---
+    final allAchievements = [...regularAchievements, ...streakAchievements];
+
+    // --- Show popups sequentially ---
+    if (mounted && allAchievements.isNotEmpty) {
+      await _showAchievementsSequentially(allAchievements);
+    }
+
+    // --- Show confirmation Snackbar ---
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Mood entry saved successfully"), behavior: SnackBarBehavior.floating),
+        const SnackBar(
+          content: Text("Mood entry saved successfully"),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -328,30 +423,72 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
     return false;
   }
 
-  void _checkAchievementsAfterSave() {
-    // We use the length of _events which we just updated in _loadAllEntries
-    int totalEntries = _events.length;
+  void _navigateWithConfirmation(
+      BuildContext context, {
+        required String title,
+        required String description,
+        required WidgetBuilder builder,
+      }) async {
+    final continueNavigation = await _showPageConfirmation(
+      title: title,
+      description: description,
+    );
 
-    if (_events.isEmpty) return;
+    if (!mounted) return; // ❌ check if widget is still alive
 
-    // First Entry
-    if (totalEntries == 1) {
-      _showAchievementPopup(
-        "First Step 🌱",
-        "You logged your first mood!",
+    if (continueNavigation == true) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: builder),
       );
-    }
-
-    // Check specific milestones
-    if (totalEntries == 3) {
-      _showAchievementPopup("Going Strong", "You have 3 entries. What a ride!", current: 3, next: 15);
-    } else if (totalEntries == 15) {
-      _showAchievementPopup("Consistent Creator", "15 entries! You're building a great habit.", current: 15, next: 30);
     }
   }
 
-  void _showAchievementPopup(String title, String desc, {int current=1, int next=1}) {
-    showDialog(
+  Future<bool?> _showPageConfirmation({
+    required String title,
+    required String description,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF000000),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.info_outline, color: Colors.blueAccent, size: 50),
+            const SizedBox(height: 16),
+            Text(title,
+                style: GoogleFonts.poppins(
+                    color: Colors.purpleAccent, fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 12),
+            Text(description,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14)),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text("Cancel",
+                        style: GoogleFonts.poppins(
+                            color: Colors.white, fontWeight: FontWeight.bold))),
+                TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text("Continue",
+                        style: GoogleFonts.poppins(
+                            color: Colors.blueAccent, fontWeight: FontWeight.bold))),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAchievementPopup(String title, String desc, {int current = 1, int next = 1}) async {
+    await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A), // Dark themed
@@ -359,10 +496,10 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.stars, color: Colors.amber, size: 80),
+            const Icon(Icons.stars, color: Colors.blue, size: 80),
             const SizedBox(height: 16),
             Text("Congratulations!",
-                style: GoogleFonts.poppins(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
+                style: GoogleFonts.poppins(color: Colors.purpleAccent, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(title,
                 style: GoogleFonts.poppins(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
@@ -376,7 +513,7 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
               child: LinearProgressIndicator(
                 value: current / next,
                 backgroundColor: Colors.white10,
-                color: Colors.cyanAccent,
+                color: Colors.purpleAccent,
                 minHeight: 10,
               ),
             ),
@@ -386,12 +523,18 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
             const SizedBox(height: 20),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text("AWESOME!", style: GoogleFonts.poppins(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
+              child: Text("AWESOME!", style: GoogleFonts.poppins(color: Colors.purpleAccent, fontWeight: FontWeight.bold)),
             )
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _showAchievementsSequentially(List<Map<String, String>> achievements) async {
+    for (final ach in achievements) {
+      await _showAchievementPopup(ach['title']!, ach['desc']!);
+    }
   }
 
   // ================= BUILD METHOD =================
@@ -415,7 +558,7 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
           image: DecorationImage(
             image: AssetImage('assets/images/background1.png'),
             fit: BoxFit.cover,
-            opacity: 0.8,
+            opacity: 0.35,
           ),
         ),
         child: SingleChildScrollView(
@@ -447,23 +590,27 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _nextPageButton(Icons.auto_awesome, "Notes", (){
-                    Navigator.push(
+                  const SizedBox(width: 10),
+                  _nextPageButton(Icons.auto_awesome, "Notes NLP", () {
+                    _navigateWithConfirmation(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => NotesScreen(selectedDate: _selectedDay),
-                      ),
-                    );
-                  }),
-                  _nextPageButton(Icons.book, "Journal", () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => JournalScreen(selectedDate: _selectedDay),
-                      ),
+                      title: "Notes (AI NLP)",
+                      description: "This page uses AI to summarize your notes. It is NOT certified for mental health guidance.",
+                      builder: (ctx) => NotesScreen(selectedDate: _selectedDay),
                     );
                   }),
 
+                  const SizedBox(width: 10),
+                  _nextPageButton(Icons.book, "Journal", () {
+                    _navigateWithConfirmation(
+                      context,
+                      title: "Journal (Templates)",
+                      description: "This page provides structured journal templates to reflect on your day.",
+                      builder: (ctx) => JournalScreen(selectedDate: _selectedDay),
+                    );
+                  }),
+
+                  const SizedBox(width: 10),
                   _nextPageButton(Icons.videogame_asset, "Activities/Games",(){
                     Navigator.push(
                       context,

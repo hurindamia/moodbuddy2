@@ -25,18 +25,137 @@ class _HomeScreenState extends State<HomeScreen> {
   String emergencyPhone = '';
   String? profileImageURL;
 
-  int moodStreak = 0;
-  int journalCount = 0;
-  double progressPercentage = 0.0;
+  int totalMoodEntries = 0;
+  int totalJournalsWritten = 0;
+  int weeklyCheckIns = 0;
+  int longestStreak = 0;
   String sentiment = "NEUTRAL";
 
   bool loading = true;
 
-  final Map<String, int> badgeTargets = {
-    '3_day_streak': 3,
-    '7_day_streak': 7,
-    'journal_5_days': 5,
-  };
+  int getNextTargetDays() {
+    for (final badge in streakBadges) {
+      if (longestStreak < badge['days']) {
+        return badge['days'];
+      }
+    }
+    return streakBadges.last['days']; // already maxed
+  }
+
+  final List<Map<String, dynamic>> streakBadges = [
+    {'days': 3, 'icon': Icons.star, 'label': '3 Days'},
+    {'days': 7, 'icon': Icons.rocket_launch, 'label': '7 Days'},
+    {'days': 30, 'icon': Icons.flash_on, 'label': '30 Days'},
+    {'days': 180, 'icon': Icons.emoji_events, 'label': '180 Days'},
+    {'days': 365, 'icon': Icons.diamond, 'label': '1 Year'},
+  ];
+
+  Widget _buildStreakScale() {
+    final int nextTarget = getNextTargetDays();
+    final double progress =
+    (longestStreak / nextTarget).clamp(0.0, 1.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "🔥 Longest Check-in Chain",
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          "Milestones based on your longest streak",
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            color: Colors.white60,
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(streakBadges.length, (index) {
+            final badge = streakBadges[index];
+            final achieved = longestStreak >= badge['days'];
+
+            return Expanded(
+              child: Column(
+                children: [
+                  Opacity(
+                    opacity: achieved ? 1.0 : 0.35,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: achieved
+                            ? const LinearGradient(
+                          colors: [Colors.pinkAccent, Colors.deepPurple],
+                        )
+                            : null,
+                        border: Border.all(
+                          color: achieved
+                              ? Colors.pinkAccent
+                              : Colors.grey,
+                          width: 2,
+                        ),
+                        boxShadow: achieved
+                            ? [
+                          BoxShadow(
+                            color: Colors.pinkAccent
+                                .withValues(alpha: 0.6),
+                            blurRadius: 10,
+                          )
+                        ]
+                            : [],
+                      ),
+                      child: Icon(
+                        badge['icon'],
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    badge['label'],
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ),
+
+        const SizedBox(height: 18),
+
+        Text(
+          "Current Goal: $nextTarget days",
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: Colors.white70,
+          ),
+        ),
+        const SizedBox(height: 6),
+
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 10,
+            backgroundColor: Colors.white24,
+            color: Colors.pinkAccent,
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   void initState() {
@@ -62,48 +181,66 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadMoodStats() async {
     if (user == null) return;
+
     final snap = await FirebaseFirestore.instance
         .collection('users')
         .doc(user!.uid)
         .collection('mood_entries')
-        .orderBy('date', descending: true)
+        .orderBy('date')
         .get();
 
-    int streak = 0;
-    DateTime? lastDate;
     final now = DateTime.now();
-    final startOfWeek = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+    final startOfWeek =
+    DateTime(now.year, now.month, now.day - (now.weekday - 1));
+
     final Set<String> weeklyDays = {};
-    final Set<String> journalDays = {};
+    final Set<DateTime> uniqueDates = {};
+
+    totalMoodEntries = snap.docs.length;
+    totalJournalsWritten = 0;
 
     for (final doc in snap.docs) {
       final data = doc.data();
       final date = (data['date'] as Timestamp).toDate();
-      final dayKey = "${date.year}-${date.month}-${date.day}";
+      final normalizedDate = DateTime(date.year, date.month, date.day);
 
-      // Streak Logic
-      if (lastDate == null || lastDate.difference(DateTime(date.year, date.month, date.day)).inDays == 1) {
-        streak++;
-        lastDate = DateTime(date.year, date.month, date.day);
-      } else if (lastDate.difference(DateTime(date.year, date.month, date.day)).inDays > 1) {
-        break;
+      uniqueDates.add(normalizedDate);
+
+      // Weekly check-in
+      if (!normalizedDate.isBefore(startOfWeek)) {
+        weeklyDays.add(normalizedDate.toIso8601String());
       }
 
-      // Weekly Progress & Sentiment
-      if (date.isAfter(startOfWeek.subtract(const Duration(seconds: 1)))) {
-        weeklyDays.add(dayKey);
-        if ((data['shortcuts'] != null && (data['shortcuts'] as Map).isNotEmpty) ||
-            (data['notes'] != null && data['notes'].toString().trim().isNotEmpty)) {
-          journalDays.add(dayKey);
+      // Journals (ALL TIME)
+      if ((data['shortcuts'] != null &&
+          (data['shortcuts'] as Map).isNotEmpty) ||
+          (data['notes'] != null &&
+              data['notes'].toString().trim().isNotEmpty)) {
+        totalJournalsWritten++;
+      }
+    }
+
+    // Weekly progress
+    weeklyCheckIns = weeklyDays.length;
+
+    // Longest streak EVER
+    final sortedDates = uniqueDates.toList()..sort();
+    int currentChain = 1;
+    longestStreak = sortedDates.isNotEmpty ? 1 : 0;
+
+    for (int i = 1; i < sortedDates.length; i++) {
+      if (sortedDates[i].difference(sortedDates[i - 1]).inDays == 1) {
+        currentChain++;
+        if (currentChain > longestStreak) {
+          longestStreak = currentChain;
         }
+      } else {
+        currentChain = 1;
       }
     }
 
     if (mounted) {
       setState(() {
-        moodStreak = streak;
-        journalCount = journalDays.length;
-        progressPercentage = weeklyDays.length / 7;
         loading = false;
       });
     }
@@ -131,33 +268,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ================= UI COMPONENTS =================
-  Widget _buildBadge(String label, IconData icon, bool achieved, int current, int target) {
-    return Column(
-      children: [
-        Opacity(
-          opacity: achieved ? 1.0 : 0.4,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: achieved ? Colors.purpleAccent : Colors.grey, width: 2),
-              gradient: achieved ? const LinearGradient(colors: [Colors.pink, Colors.purple]) : null,
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: GoogleFonts.poppins(fontSize: 10, color: Colors.white)),
-        if (!achieved)
-          Container(
-            width: 40, height: 4,
-            margin: const EdgeInsets.only(top: 4),
-            child: LinearProgressIndicator(value: (current / target).clamp(0.0, 1.0), color: Colors.purpleAccent),
-          )
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -173,7 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
               image: DecorationImage(
                 image: AssetImage('assets/images/background1.png'), // Using background1 from your first code
                 fit: BoxFit.cover,
-                opacity: 0.8,
+                opacity: 0.35,
               ),
             ),
             child: Container(
@@ -251,16 +361,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 18),
 
                     // Badges Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildBadge("3 Days", Icons.local_fire_department, moodStreak >= 3, moodStreak, 3),
-                        const SizedBox(width: 20),
-                        _buildBadge("7 Days", Icons.whatshot, moodStreak >= 7, moodStreak, 7),
-                        const SizedBox(width: 20),
-                        _buildBadge("Journal", Icons.menu_book, journalCount >= 5, journalCount, 5),
-                      ],
-                    ),
+                    _buildStreakScale(),
 
                     const SizedBox(height: 24),
 
@@ -278,9 +379,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Progress Summary
                     ProgressSummaryCard(
-                      moodStreak: moodStreak,
-                      journals: journalCount,
-                      progressPercentage: progressPercentage,
+                      totalMoodEntries: totalMoodEntries,
+                      totalJournals: totalJournalsWritten,
+                      weeklyProgress: weeklyCheckIns / 7,
                     ),
 
                     const SizedBox(height: 26),

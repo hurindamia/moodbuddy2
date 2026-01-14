@@ -74,12 +74,11 @@ class _JournalScreenState extends State<JournalScreen> {
         title: Text(
           "Journal",
           style: GoogleFonts.poppins(
-            color: Colors.black,
+            color: Colors.white,
             fontWeight: FontWeight.w600,
           ),
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        backgroundColor: const Color(0xFF9575CD),        elevation: 0,
         actions: [
           TextButton(
             onPressed: _saveJournal,
@@ -87,7 +86,7 @@ class _JournalScreenState extends State<JournalScreen> {
               "Save",
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF9575CD),
+                color: Colors.white,
               ),
             ),
           ),

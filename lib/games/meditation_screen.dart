@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/activity_service.dart';
 
 class MeditationScreen extends StatefulWidget {
   const MeditationScreen({super.key});
@@ -36,6 +39,36 @@ class _MeditationScreenState extends State<MeditationScreen> {
     setState(() => _isRunning = !_isRunning);
   }
 
+  Future<void> _saveMeditationActivity() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Save meditation activity
+    await ActivityService.saveActivity(
+      date: DateTime.now(),
+      activityData: {
+        'meditation': {
+          'completed': true,
+          'duration': _targetSeconds ~/ 60, // minutes
+          'timestamp': FieldValue.serverTimestamp(),
+        }
+      },
+    );
+
+    // Unlock meditation achievement
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('achievements')
+        .doc('meditation_starter')
+        .set(
+      {
+        'unlockedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -56,9 +89,18 @@ class _MeditationScreenState extends State<MeditationScreen> {
         centerTitle: true, // Centers the title in the bar
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Done",
-                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: const Color(0xFF9575CD))),
+            onPressed: () async {
+              await _saveMeditationActivity();
+              if (!context.mounted) return;
+              Navigator.pop(context);
+            },
+            child: Text(
+              "Done",
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF9575CD),
+              ),
+            ),
           ),
         ],
       ),

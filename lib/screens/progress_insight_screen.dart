@@ -54,6 +54,30 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
   final double _sleepGoal = 8.0;
   final double _stressThreshold = 4.0;
 
+  int _calculateLongestStreak(List<MoodEntry> entries) {
+    if (entries.isEmpty) return 0;
+
+    final uniqueDates = entries
+        .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
+        .toSet()
+        .toList()
+      ..sort();
+
+    int longest = 1;
+    int current = 1;
+
+    for (int i = 1; i < uniqueDates.length; i++) {
+      if (uniqueDates[i].difference(uniqueDates[i - 1]).inDays == 1) {
+        current++;
+        longest = current > longest ? current : longest;
+      } else {
+        current = 1;
+      }
+    }
+
+    return longest;
+  }
+
   List<String> unlockedBadges = [];
   bool _isLoadingBadges = true;
 
@@ -73,10 +97,140 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
     });
   }
 
+  Future<void> _evaluateAndUnlockAchievements() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final entriesSnap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('mood_entries')
+        .get();
+
+    final docs = entriesSnap.docs;
+
+    int stressCount = 0;
+    int sleepCount = 0;
+    int balancedEntries = 0;
+
+    final Set<DateTime> uniqueDays = {};
+    int daysWithNotesOrShortcuts = 0;
+
+    for (final doc in docs) {
+      final data = doc.data();
+      final date = (data['date'] as Timestamp).toDate();
+
+      uniqueDays.add(DateTime(date.year, date.month, date.day));
+
+      final hasStress = data['stressLevel'] != null;
+      final hasSleep = data['sleepHours'] != null;
+      final hasMood = data['moodScore'] != null;
+
+      if (hasStress) stressCount++;
+      if (hasSleep) sleepCount++;
+
+      if (hasMood && hasStress && hasSleep) {
+        balancedEntries++;
+      }
+
+      final hasNotes = data['notes'] != null &&
+          data['notes'].toString().trim().isNotEmpty;
+
+      final hasShortcuts = data['shortcuts'] != null &&
+          (data['shortcuts'] as Map).isNotEmpty;
+
+      if (hasNotes || hasShortcuts) {
+        daysWithNotesOrShortcuts++;
+      }
+    }
+
+    final achievementsRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('achievements');
+
+    final Map<String, bool> rules = {
+      'first_entry': docs.isNotEmpty,
+      'going_strong': uniqueDays.length >= 30,
+      'consistent_creator': daysWithNotesOrShortcuts >= 14,
+      'stress_logger': stressCount >= 5,
+      'sleep_tracker': sleepCount >= 5,
+      'balanced_mind': balancedEntries >= 3,
+    };
+
+    for (final rule in rules.entries) {
+      if (rule.value) {
+        await achievementsRef.doc(rule.key).set(
+          {'unlockedAt': FieldValue.serverTimestamp()},
+          SetOptions(merge: true),
+        );
+      }
+    }
+  }
+
+  Future<void> _syncStreakAchievements(int longestStreak) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final achievementsRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('achievements');
+
+    final Map<String, int> streakBadges = {
+      'streak_3': 3,
+      'streak_7': 7,
+      'streak_30': 30,
+      'streak_180': 180,
+      'streak_365': 365,
+    };
+
+    for (final entry in streakBadges.entries) {
+      if (longestStreak >= entry.value) {
+        await achievementsRef.doc(entry.key).set({
+          'unlockedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+    }
+  }
+
+  void _showBadgeInfo(Map<String, dynamic> badge, bool unlocked) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(badge['icon'], color: Colors.purple),
+            const SizedBox(width: 8),
+            Text(badge['label'], style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          unlocked
+              ? "🎉 You have unlocked this achievement!\n\n${badge['desc']}"
+              : "🔒 Not unlocked yet.\n\n${badge['desc']}",
+          style: GoogleFonts.poppins(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Got it"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _loadMoodEntries();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _loadUnlockedBadges();
   }
 
@@ -95,6 +249,10 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
           .orderBy('date', descending: false)
           .get();
       allEntries = snapshot.docs.map((doc) => MoodEntry.fromFirestore(doc)).toList();
+      await _evaluateAndUnlockAchievements();
+      final longestStreak = _calculateLongestStreak(allEntries);
+      await _syncStreakAchievements(longestStreak);
+      await _loadUnlockedBadges();
     } catch (e) {
       debugPrint('Error: $e');
     }
@@ -401,7 +559,7 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
           image: DecorationImage(
             image: AssetImage('assets/images/background1.png'),
             fit: BoxFit.cover,
-            opacity: 0.8,
+            opacity: 0.35,
           ),
         ),
         child: SingleChildScrollView(
@@ -452,26 +610,40 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
 
               const SizedBox(height: 35),
 
-              // --- AI INSIGHTS BOTTOM ---
-              Text('AI Insights & Trends', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+              // ---INSIGHTS BOTTOM ---
+              Text('Insights & Trends', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               _buildInsightSummaryCard(),
               const SizedBox(height: 40),
 
-              ExpansionTile(
-                title: Text(
-                  "Achievements",
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: _buildAchievementsGrid(unlockedBadges),
+                child: ExpansionTile(
+                  initiallyExpanded: true,
+                  title: Text(
+                    "Achievements",
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ],
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: _buildAchievementsGrid(unlockedBadges),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -660,25 +832,96 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
 
   Widget _buildAchievementsGrid(List<dynamic> unlockedBadges) {
     final achievements = [
+      // --- BASIC ---
       {
         'id': 'first_entry',
-        'icon': Icons.emoji_events,
+        'icon': Icons.local_florist,
         'label': 'First Step',
+        'desc': 'Log your first mood entry',
       },
       {
         'id': 'going_strong',
-        'icon': Icons.menu_book,
+        'icon': Icons.directions_run,
         'label': 'Going Strong',
+        'desc': 'Log moods on 30 different days',
       },
       {
         'id': 'consistent_creator',
-        'icon': Icons.local_fire_department,
-        'label': 'Consistent',
+        'icon': Icons.sticky_note_2_sharp,
+        'label': 'Active Writer',
+        'desc': 'Write notes on 14 different days',
+      },
+
+      // --- WELLNESS TRACKING ---
+      {
+        'id': 'stress_logger',
+        'icon': Icons.psychology,
+        'label': 'Stress Aware',
+        'desc': 'Log stress levels at least 5 times',
       },
       {
-        'id': 'busy_bee',
-        'icon': Icons.directions_run,
-        'label': 'Busy Bee',
+        'id': 'sleep_tracker',
+        'icon': Icons.bedtime,
+        'label': 'Sleep Tracker',
+        'desc': 'Track your sleep duration 5 times',
+      },
+      {
+        'id': 'balanced_mind',
+        'icon': Icons.self_improvement,
+        'label': 'Balanced Mind',
+        'desc': 'Log mood, stress, and sleep together 3 times',
+      },
+
+      // --- ACTIVITIES ---
+      {
+        'id': 'breathing_beginner',
+        'icon': Icons.air,
+        'label': 'Just Breathe',
+        'desc': 'Complete your first breathing exercise',
+      },
+      {
+        'id': 'meditation_starter',
+        'icon': Icons.spa,
+        'label': 'Meditation Starter',
+        'desc': 'Complete your first meditation session',
+      },
+      {
+        'id': 'feelings_explorer',
+        'icon': Icons.videogame_asset,
+        'label': 'Emotion Explorer',
+        'desc': 'Complete your first feelings wheel game',
+      },
+
+      // --- STREAK SCALE ---
+      {
+        'id': 'streak_3',
+        'icon': Icons.star,
+        'label': '3-Day Streak',
+        'desc': 'Log moods for 3 consecutive days',
+      },
+      {
+        'id': 'streak_7',
+        'icon': Icons.rocket_launch,
+        'label': '7-Day Streak',
+        'desc': 'Log moods for 7 consecutive days',
+      },
+      {
+        'id': 'streak_30',
+        'icon': Icons.flash_on,
+        'label': '30-Day Streak',
+        'desc': 'Log moods for 30 consecutive days',
+      },
+      {
+        'id': 'streak_180',
+        'icon': Icons.emoji_events,
+        'label': '6-Month Streak',
+        'desc': 'Log moods for 180 consecutive days',
+      },
+      {
+        'id': 'streak_365',
+        'icon': Icons.diamond,
+        'label': '1-Year Streak',
+        'desc': 'Log moods for 365 consecutive days',
       },
     ];
 
@@ -695,14 +938,16 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
         final badge = achievements[index];
         final unlocked = unlockedBadges.contains(badge['id']);
 
-        return Column(
-          children: [
-            Opacity(
+        return GestureDetector(
+          onTap: () => _showBadgeInfo(badge, unlocked),
+            child: Column(
+              children: [
+                Opacity(
               opacity: unlocked ? 1 : 0.25,
               child: CircleAvatar(
                 radius: 30,
                 backgroundColor:
-                unlocked ? Colors.purple : Colors.grey.shade800,
+                unlocked ? Colors.purple : Colors.grey.shade400,
                 child: Icon(
                   badge['icon'] as IconData,
                   color: Colors.white,
@@ -717,7 +962,7 @@ class _ProgressInsightScreenState extends State<ProgressInsightScreen> {
               textAlign: TextAlign.center,
             ),
           ],
-        );
+        ));
       },
     );
   }

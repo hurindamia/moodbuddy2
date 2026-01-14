@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/activity_service.dart';
@@ -18,8 +19,11 @@ class BreathingScreen extends StatefulWidget {
 class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   String _instruction = "Inhale";
-
   Future<void> _saveBreathingActivity() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Save activity
     await ActivityService.saveActivity(
       date: widget.selectedDate,
       activityData: {
@@ -29,6 +33,19 @@ class _BreathingScreenState extends State<BreathingScreen> with SingleTickerProv
           'timestamp': FieldValue.serverTimestamp(),
         }
       },
+    );
+
+    // Unlock achievement in Firestore
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('achievements')
+        .doc('breathing_beginner')
+        .set(
+      {
+        'unlockedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
     );
   }
 
